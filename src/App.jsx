@@ -6,6 +6,12 @@ import ShareMenu from "./components/ShareMenu";
 import SaveMenu from "./components/SaveMenu";
 import FlowingMenu from "./components/FlowingMenu";
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
+import { io } from "socket.io-client";
+
+// Global Socket definition allowing multi-tab caching dynamically against the deployment or local container
+const socket = io(window.location.hostname === "localhost" ? "http://localhost:3000" : "/", { 
+  autoConnect: false 
+});
 
 export default function App() {
   // LocalStorage initialization to persist permanently
@@ -26,13 +32,56 @@ export default function App() {
   const [activeFont, setActiveFont] = useState("Caveat");
   const [jumpPage, setJumpPage] = useState("");
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [roomId, setRoomId] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('access') === 'view') {
       setIsViewOnly(true);
     }
+    
+    // Automatically define a multiplayer session room UUID if missing securely
+    let docId = params.get('doc');
+    if (!docId) {
+      docId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('doc', docId);
+      window.history.replaceState({}, '', newUrl);
+    }
+    setRoomId(docId);
+
+    // Stream Initiation
+    socket.connect();
+    socket.emit("join_document", docId);
+
+    const handleInitSync = (serverPages) => {
+      // If the cloud already holds data for this session, instantly populate it to memory
+      if (serverPages && serverPages.length > 0) {
+        setPages(serverPages);
+      }
+    };
+
+    const handleSyncPages = (latestPagesArray) => {
+      setPages(latestPagesArray);
+    };
+
+    socket.on("init_sync", handleInitSync);
+    socket.on("sync_pages", handleSyncPages);
+
+    return () => {
+      socket.off("init_sync", handleInitSync);
+      socket.off("sync_pages", handleSyncPages);
+      socket.disconnect();
+    };
   }, []);
+
+  // Sync helper that replaces standard local setPages
+  const broadcastAndSetPages = (newPages) => {
+    setPages(newPages);
+    if (socket.connected) {
+      socket.emit('update_pages', newPages);
+    }
+  };
 
   // Save changes automatically
   useEffect(() => {
@@ -42,7 +91,7 @@ export default function App() {
   const updatePageHtml = (newHtml) => {
     const copy = [...pages];
     copy[current].html = newHtml;
-    setPages(copy);
+    broadcastAndSetPages(copy);
   };
 
   const updatePageStrokes = (strokesUpdater) => {
@@ -52,7 +101,7 @@ export default function App() {
     } else {
       copy[current].strokes = strokesUpdater || [];
     }
-    setPages(copy);
+    broadcastAndSetPages(copy);
   };
 
   const addText = (newText) => {
@@ -68,12 +117,13 @@ export default function App() {
 
     const copy = [...pages];
     copy[current].html = (copy[current].html || "") + snippet;
-    setPages(copy);
+    broadcastAndSetPages(copy);
   };
 
   const nextPage = () => {
     if (current >= pages.length - 1) {
-      setPages([...pages, { html: "", strokes: [] }]);
+      const copy = [...pages, { html: "", strokes: [] }];
+      broadcastAndSetPages(copy);
     }
     setCurrent(current + 1);
   };
