@@ -206,7 +206,8 @@
             background:rgba(0,0,0,.9);overflow:hidden;backface-visibility:hidden}
         .pc-card:hover,.pc-card.active{transition:none;transform:translateZ(0) rotateX(var(--pc-rotate-y)) rotateY(var(--pc-rotate-x))}
         .pc-card-shell.entering .pc-card{transition:transform 180ms ease-out}
-        .pc-card *{display:grid;grid-area:1/-1;border-radius:var(--pc-radius);pointer-events:none}
+        .pc-card .pc-inside > * { pointer-events: none; }
+        .pc-inside { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2rem 0; }
         .pc-inside{inset:0;position:absolute;background-image:var(--pc-inner-gradient);background-color:rgba(0,0,0,.85)}
         .pc-shine{mask-image:none;mix-blend-mode:color-dodge;z-index:3;overflow:hidden;
             background-image:
@@ -220,13 +221,13 @@
             background-image:radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),hsl(248,25%,80%) 12%,hsla(207,40%,30%,.8) 90%);
             mix-blend-mode:overlay;filter:brightness(.8) contrast(1.2)}
         .pc-avatar-content{mix-blend-mode:luminosity;overflow:visible;transform:translateZ(2px)}
-        .pc-avatar-initials{width:140px;height:140px;border-radius:50%;display:flex!important;align-items:center;justify-content:center;
-            font-size:3.5rem;font-weight:700;color:#fff;position:absolute;left:50%;bottom:30px;
-            transform:translateX(-50%);background:linear-gradient(135deg,#10a37f,#3b82f6);box-shadow:0 8px 32px rgba(0,0,0,.5);
-            border:3px solid rgba(255,255,255,.15)}
+        .pc-avatar-initials{width:160px;height:160px;border-radius:50%;display:flex!important;align-items:center;justify-content:center;
+            font-size:4rem;font-weight:700;color:#fff;position:relative;margin-top: 1rem;
+            background:linear-gradient(135deg,#10a37f,#3b82f6);box-shadow:0 8px 32px rgba(0,0,0,.5);
+            border:3px solid rgba(255,255,255,.15); pointer-events: auto !important; }
         .pc-content:not(.pc-avatar-content){max-height:100%;overflow:hidden;text-align:center;position:relative;z-index:5;
             transform:translate3d(calc(var(--pc-from-left)*-6px + 3px),calc(var(--pc-from-top)*-6px + 3px),.1px);mix-blend-mode:luminosity}
-        .pc-details{width:100%;position:absolute;top:2.5rem;display:flex;flex-direction:column}
+        .pc-details{width:100%; display:flex;flex-direction:column; align-items: center; }
         .pc-details h3{font-weight:700;margin:0;font-size:1.8rem;
             background-image:linear-gradient(to bottom,#fff,#6f6fbe);-webkit-text-fill-color:transparent;
             background-clip:text;-webkit-background-clip:text}
@@ -251,8 +252,9 @@
             background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);display:flex!important;align-items:center}
         .pc-contact-btn:hover{background:rgba(239,68,68,.3);transform:translateY(-1px)}
         .pc-card-wrapper:hover .pc-behind,.pc-card-wrapper.active .pc-behind{--pc-card-opacity:1}
-        .pc-camera-overlay{position:absolute;inset:0;border-radius:50%;display:flex!important;align-items:center;
-            justify-content:center;background:rgba(0,0,0,.55);opacity:0;transition:opacity .25s;pointer-events:none}
+        .pc-camera-overlay{position:absolute;inset:0;border-radius:50%;display:flex!important;flex-direction:column;align-items:center;
+            justify-content:center;background:rgba(0,0,0,.65);opacity:0;transition:opacity .25s;pointer-events:none}
+        .pc-camera-overlay span { font-size: 10px; font-weight: 600; color: #fff; margin-top: 4px; }
         .pc-avatar-initials:hover .pc-camera-overlay{opacity:1}
     </style>
 </head>
@@ -470,10 +472,13 @@
                         <div class="pc-shine"></div>
                         <div class="pc-glare"></div>
                         <div class="pc-content pc-avatar-content">
-                            <div class="pc-avatar-initials" id="pc-avatar" onclick="document.getElementById('pc-pic-input').click()" style="cursor:pointer;position:relative">
+                            <div class="pc-avatar-initials" id="pc-avatar" onclick="document.getElementById('pc-pic-input').click()" title="Click to upload profile picture">
                                 <img id="pc-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0" />
                                 <span id="pc-avatar-letter"></span>
-                                <div class="pc-camera-overlay"><i data-lucide="camera" class="w-6 h-6"></i></div>
+                                <div class="pc-camera-overlay">
+                                    <i data-lucide="camera" class="w-6 h-6"></i>
+                                    <span>CHANGE</span>
+                                </div>
                             </div>
                             <input type="file" id="pc-pic-input" accept="image/*" style="display:none" onchange="handleProfilePicUpload(event)" />
                         </div>
