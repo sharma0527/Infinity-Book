@@ -86,12 +86,14 @@ function MenuItem({ text, image, speed, textColor, marqueeBgColor, marqueeTextCo
         animationRef.current.kill();
       }
 
+      /*
       animationRef.current = gsap.to(marqueeInnerRef.current, {
         x: -contentWidth,
         duration: speed,
         ease: 'none',
         repeat: -1
       });
+      */
     };
 
     const timer = setTimeout(setupMarquee, 50);

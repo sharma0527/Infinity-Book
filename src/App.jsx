@@ -5,7 +5,9 @@ import FixedBook from "./components/FixedBook";
 import ShareMenu from "./components/ShareMenu";
 import SaveMenu from "./components/SaveMenu";
 import FlowingMenu from "./components/FlowingMenu";
-import { ChevronLeft, ChevronRight, Home } from "lucide-react";
+import HomePage from "./components/HomePage";
+import AIAssistant from "./components/AIAssistant";
+import { ChevronLeft, ChevronRight, Home, Sparkles } from "lucide-react";
 import { io } from "socket.io-client";
 
 // Global Socket definition allowing multi-tab caching dynamically against the deployment or local container
@@ -25,6 +27,10 @@ export default function App() {
 
   const [pages, setPages] = useState(getInitialPages);
   const [current, setCurrent] = useState(0);
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('doc') ? 'notebook' : 'home';
+  });
 
   const [mode, setMode] = useState("TEXT"); // 'TEXT' or 'PEN'
   const [activeTool, setActiveTool] = useState("pen"); // 'pen', 'pencil', 'highlighter'
@@ -33,6 +39,76 @@ export default function App() {
   const [jumpPage, setJumpPage] = useState("");
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [roomId, setRoomId] = useState("");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  
+  const [orbPos, setOrbPos] = useState(null);
+  const orbRef = React.useRef(null);
+  const dragState = React.useRef({ isDragging: false, startX: 0, startY: 0 });
+
+  const [panelPos, setPanelPos] = useState(null);
+  const panelRef = React.useRef(null);
+  const panelDragState = React.useRef({ isDragging: false, startX: 0, startY: 0 });
+
+  const handlePanelPointerDown = (e) => {
+    panelDragState.current = { isDragging: false, startX: e.clientX, startY: e.clientY };
+    const rect = panelRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    const onPointerMove = (moveEv) => {
+      panelDragState.current.isDragging = true;
+      setPanelPos({
+        x: moveEv.clientX - offsetX,
+        y: moveEv.clientY - offsetY
+      });
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const handleOrbPointerDown = (e) => {
+    dragState.current = { isDragging: false, startX: e.clientX, startY: e.clientY };
+    const rect = orbRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    const onPointerMove = (moveEv) => {
+      if (Math.abs(moveEv.clientX - dragState.current.startX) > 5 || Math.abs(moveEv.clientY - dragState.current.startY) > 5) {
+        dragState.current.isDragging = true;
+      }
+      setOrbPos({
+        x: moveEv.clientX - offsetX,
+        y: moveEv.clientY - offsetY
+      });
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  const handleOrbClick = () => {
+    if (!dragState.current.isDragging) {
+      setAiPanelOpen(true);
+      setTimeout(() => {
+        const iframe = document.querySelector('iframe[title="Infinity Intelligence Chat"]');
+        if (iframe && iframe.contentWindow) {
+          const strippedText = (pages[current]?.html || '').replace(/<[^>]+>/g, ' ').trim();
+          iframe.contentWindow.postMessage({ type: 'INJECT_CONTEXT', text: strippedText }, '*');
+        }
+      }, 500);
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,39 +116,45 @@ export default function App() {
       setIsViewOnly(true);
     }
     
-    // Automatically define a multiplayer session room UUID if missing securely
-    let docId = params.get('doc');
-    if (!docId) {
-      docId = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const newUrl = new URL(window.location.href);
-      newUrl.searchParams.set('doc', docId);
-      window.history.replaceState({}, '', newUrl);
+    if (view === 'notebook') {
+      let docId = params.get('doc');
+      setRoomId(docId);
+
+      // Stream Initiation
+      socket.connect();
+      socket.emit("join_document", docId);
+
+      const handleInitSync = (serverPages) => {
+        // If the cloud already holds data for this session, instantly populate it to memory
+        if (serverPages && serverPages.length > 0) {
+          setPages(serverPages);
+        }
+      };
+
+      const handleSyncPages = (latestPagesArray) => {
+        setPages(latestPagesArray);
+      };
+
+      socket.on("init_sync", handleInitSync);
+      socket.on("sync_pages", handleSyncPages);
+
+      return () => {
+        socket.off("init_sync", handleInitSync);
+        socket.off("sync_pages", handleSyncPages);
+        socket.disconnect();
+      };
     }
-    setRoomId(docId);
+  }, [view]);
 
-    // Stream Initiation
-    socket.connect();
-    socket.emit("join_document", docId);
-
-    const handleInitSync = (serverPages) => {
-      // If the cloud already holds data for this session, instantly populate it to memory
-      if (serverPages && serverPages.length > 0) {
-        setPages(serverPages);
+  // Listen for iframe messages
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'CLOSE_PANEL') {
+        setAiPanelOpen(false);
       }
     };
-
-    const handleSyncPages = (latestPagesArray) => {
-      setPages(latestPagesArray);
-    };
-
-    socket.on("init_sync", handleInitSync);
-    socket.on("sync_pages", handleSyncPages);
-
-    return () => {
-      socket.off("init_sync", handleInitSync);
-      socket.off("sync_pages", handleSyncPages);
-      socket.disconnect();
-    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   // Sync helper that replaces standard local setPages
@@ -120,6 +202,15 @@ export default function App() {
     broadcastAndSetPages(copy);
   };
 
+  const addImage = (dataUrl, fileName) => {
+    // Wrap the image in a styled block; cursor:pointer lets EditablePage detect the click for editing
+    const snippet = `<div style="margin:8px 0;line-height:0;position:relative;display:inline-block;"><img src="${dataUrl}" alt="${fileName || 'image'}" style="width:240px;max-width:100%;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.15);display:block;cursor:pointer;" /></div>`;
+    const copy = [...pages];
+    copy[current].html = (copy[current].html || "") + snippet;
+    broadcastAndSetPages(copy);
+  };
+
+
   const nextPage = () => {
     if (current >= pages.length - 1) {
       const copy = [...pages, { html: "", strokes: [] }];
@@ -163,13 +254,28 @@ export default function App() {
     }));
 
   return (
-    <div style={styles.appWrapper}>
-      {/* SIDEBAR NAVIGATION using FlowingMenu */}
+    <>
+      {view === 'home' ? (
+        <HomePage onStart={() => {
+          const newDocId = Math.random().toString(36).substring(2, 10).toUpperCase();
+          window.location.href = `/?doc=${newDocId}`;
+        }} />
+      ) : (
+        <div style={styles.appWrapper}>
+          {/* SIDEBAR NAVIGATION using FlowingMenu */}
       <div style={styles.sidebarWrap}>
         <div style={styles.sidebarHeader}>
-          <button onClick={() => setCurrent(0)} style={styles.homeBtn} title="Return to Cover Page">
+          <button onClick={() => window.location.href = '/'} style={styles.homeBtn} title="Return to Home Page">
             <Home size={20} color="#fff" />
             <span style={styles.homeText}>HOME</span>
+          </button>
+          <button 
+            onClick={() => window.location.href = '/chatbot.ai/index.html'} 
+            style={{ ...styles.homeBtn, background: 'linear-gradient(135deg,#5ea2ff,#ff5fa2)', border: 'none', justifyContent: 'center' }} 
+            title="Open Infinity GPT"
+          >
+            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', lineHeight: '20px' }}>∞</span>
+            <span style={styles.homeText}>INFINITY INTELLIGENCE</span>
           </button>
         </div>
         <div style={styles.menuContainer}>
@@ -212,7 +318,8 @@ export default function App() {
         {/* CHAT INPUT AND MODE TOGGLE (Hidden in View Mode) */}
         {!isViewOnly && (
           <ChatBar 
-            addText={addText} 
+            addText={addText}
+            addImage={addImage}
             mode={mode} 
             setMode={setMode} 
             activeTool={activeTool}
@@ -262,7 +369,97 @@ export default function App() {
           </button>
         </div>
       </div>
+
+      {/* AI VOICE ORB & PANEL TRIGGER */}
+      <button 
+        ref={orbRef}
+        onPointerDown={handleOrbPointerDown}
+        onClick={handleOrbClick}
+        style={{
+          position: 'absolute',
+          ...(orbPos 
+            ? { left: orbPos.x + 'px', top: orbPos.y + 'px', right: 'auto', bottom: 'auto' } 
+            : { bottom: '40px', right: '40px' }),
+          height: '50px',
+          padding: '0 24px',
+          borderRadius: '25px',
+          background: 'linear-gradient(135deg, rgba(115,165,255,0.8), rgba(255,95,162,0.8))',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          boxShadow: '0 8px 30px rgba(255, 95, 162, 0.3), inset 0 0 10px rgba(255,255,255,0.2)',
+          cursor: dragState.current?.isDragging ? 'grabbing' : 'pointer',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '15px',
+          transition: dragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          transform: aiPanelOpen ? 'scale(0)' : 'scale(1)',
+          pointerEvents: aiPanelOpen ? 'none' : 'auto',
+          touchAction: 'none' // Prevent scrolling while dragging on touch devices
+        }}
+        title="Ask Infinity Intelligence"
+      >
+        <Sparkles color="#fff" size={20} />
+        Ask Infinity Intelligence
+      </button>
+
+      {/* AI DRAGGABLE FLOATING PANEL */}
+      {aiPanelOpen && (
+        <div 
+          ref={panelRef}
+          style={{
+            position: 'absolute',
+            top: panelPos ? panelPos.y + 'px' : Math.max(10, (orbPos ? orbPos.y : window.innerHeight - 40) - 620) + 'px',
+            left: panelPos ? panelPos.x + 'px' : Math.max(10, (orbPos ? orbPos.x : window.innerWidth - 40) - 440) + 'px',
+            width: '420px',
+            height: '600px',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            zIndex: 110,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            transition: panelDragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+          }}>
+          <div 
+            onPointerDown={handlePanelPointerDown}
+            style={{ 
+              padding: '15px 20px', 
+              borderBottom: '1px solid rgba(255,255,255,0.1)', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              cursor: 'grab',
+              background: 'rgba(255,255,255,0.02)',
+              touchAction: 'none'
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', pointerEvents: 'none' }}>
+              <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#10a37f' }}>∞</span>
+              <span style={{ color: '#fff', fontWeight: 'bold', letterSpacing: '1px', fontSize: '14px' }}>INFINITY INTELLIGENCE</span>
+            </div>
+            <button 
+              onClick={() => setAiPanelOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '20px', padding: '5px' }}
+            >
+              ✕
+            </button>
+          </div>
+          <iframe 
+            src="/chatbot.ai/index.html" 
+            style={{ width: '100%', height: '100%', border: 'none', pointerEvents: panelDragState.current?.isDragging ? 'none' : 'auto' }}
+            title="Infinity Intelligence Chat"
+          ></iframe>
+        </div>
+      )}
     </div>
+      )}
+    </>
   );
 }
 
@@ -289,11 +486,14 @@ const styles = {
     padding: "20px",
     borderBottom: "1px solid rgba(255,255,255,0.1)",
     display: "flex",
-    justifyContent: "center"
+    flexDirection: "column",
+    gap: "12px",
+    alignItems: "stretch"
   },
   homeBtn: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: "10px",
     background: "rgba(255,255,255,0.1)",
     border: "1px solid rgba(255,255,255,0.2)",

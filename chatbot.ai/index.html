@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Infinity AI</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        main: '#0f172a',
+                        sidebar: '#0b1220',
+                        card: '#1e293b',
+                        border: '#334155',
+                        textPrimary: '#ffffff',
+                        textSecondary: '#94a3b8',
+                        accent: '#10a37f',
+                        accentHover: '#1a7f64'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Document Parsers -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Set up pdf.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+    
+    <!-- Highlight.js for Code Blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Markdown Styles */
+        .prose pre {
+            background-color: #0b1220;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+            position: relative;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+        .prose pre code {
+            background-color: transparent;
+            padding: 0;
+            color: #e2e8f0;
+        }
+        .prose p { margin-bottom: 0.75rem; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .prose a { color: #10a37f; text-decoration: underline; }
+        .prose h1, .prose h2, .prose h3, .prose h4 { font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+
+        /* Code Copy Button */
+        .copy-code-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .prose pre:hover .copy-code-btn {
+            opacity: 1;
+        }
+        .copy-code-btn:hover {
+            color: #ffffff;
+            background: #334155;
+        }
+
+        /* Input Auto-Resize */
+        textarea {
+            resize: none;
+            overflow-y: hidden;
+            min-height: 44px;
+            max-height: 200px;
+        }
+
+        /* Blinking Cursor */
+        .blinking-cursor::after {
+            content: '▋';
+            display: inline-block;
+            animation: blink 1s step-end infinite;
+            margin-left: 2px;
+            vertical-align: baseline;
+            color: #ffffff;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Glassmorphism Header */
+        .glass-header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        /* Sidebar transition */
+        #sidebar {
+            transition: transform 0.3s ease;
+        }
+
+        /* Typing dots */
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background-color: #94a3b8;
+            border-radius: 50%;
+            display: inline-block;
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* ── ProfileCard ── */
+        :root {
+            --pc-pointer-x:50%;--pc-pointer-y:50%;--pc-pointer-center:0;
+            --pc-from-top:0.5;--pc-from-left:0.5;--pc-card-opacity:0;
+            --pc-rotate-x:0deg;--pc-rotate-y:0deg;
+            --pc-bg-x:50%;--pc-bg-y:50%;
+            --pc-inner-gradient:linear-gradient(145deg,#60496e8c 0%,#71C4FF44 100%);
+            --pc-glow:rgba(125,190,255,0.67);
+            --pc-sp1:hsl(2,100%,73%);--pc-sp2:hsl(53,100%,69%);--pc-sp3:hsl(93,100%,69%);
+            --pc-sp4:hsl(176,100%,76%);--pc-sp5:hsl(228,100%,74%);--pc-sp6:hsl(283,100%,73%);
+            --pc-radius:28px;
+        }
+        .pc-card-wrapper{perspective:500px;transform:translate3d(0,0,.1px);position:relative;touch-action:none;z-index:10}
+        .pc-behind{position:absolute;inset:0;z-index:0;pointer-events:none;
+            background:radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),var(--pc-glow) 0%,transparent 50%);
+            filter:blur(50px) saturate(1.1);opacity:calc(.8*var(--pc-card-opacity));transition:opacity 200ms}
+        .pc-card-shell{position:relative;z-index:1}
+        .pc-card{width:300px;height:420px;display:grid;border-radius:var(--pc-radius);position:relative;
+            box-shadow:rgba(0,0,0,.8) calc((var(--pc-from-left)*10px) - 3px) calc((var(--pc-from-top)*20px) - 6px) 20px -5px;
+            transition:transform 1s ease;transform:translateZ(0) rotateX(0) rotateY(0);
+            background:rgba(0,0,0,.9);overflow:hidden;backface-visibility:hidden}
+        .pc-card:hover,.pc-card.active{transition:none;transform:translateZ(0) rotateX(var(--pc-rotate-y)) rotateY(var(--pc-rotate-x))}
+        .pc-card-shell.entering .pc-card{transition:transform 180ms ease-out}
+        .pc-card *{display:grid;grid-area:1/-1;border-radius:var(--pc-radius);pointer-events:none}
+        .pc-inside{inset:0;position:absolute;background-image:var(--pc-inner-gradient);background-color:rgba(0,0,0,.85)}
+        .pc-shine{mask-image:none;mix-blend-mode:color-dodge;z-index:3;overflow:hidden;
+            background-image:
+                repeating-linear-gradient(0deg,var(--pc-sp1) 0%,var(--pc-sp2) 16.6%,var(--pc-sp3) 33.3%,var(--pc-sp4) 50%,var(--pc-sp5) 66.6%,var(--pc-sp6) 83.3%,var(--pc-sp1) 100%),
+                radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),hsla(0,0%,0%,.1) 12%,hsla(0,0%,0%,.25) 120%);
+            background-size:500% 500%,200% 200%;background-blend-mode:color,hard-light;
+            filter:brightness(.5) contrast(1.2) saturate(.3) opacity(.4);
+            background-position:0 var(--pc-bg-y),center}
+        .pc-card:hover .pc-shine,.pc-card.active .pc-shine{filter:brightness(.8) contrast(1.4) saturate(.5);animation-play-state:paused}
+        .pc-glare{transform:translate3d(0,0,1.1px);overflow:hidden;z-index:4;
+            background-image:radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),hsl(248,25%,80%) 12%,hsla(207,40%,30%,.8) 90%);
+            mix-blend-mode:overlay;filter:brightness(.8) contrast(1.2)}
+        .pc-avatar-content{mix-blend-mode:luminosity;overflow:visible;transform:translateZ(2px)}
+        .pc-avatar-initials{width:140px;height:140px;border-radius:50%;display:flex!important;align-items:center;justify-content:center;
+            font-size:3.5rem;font-weight:700;color:#fff;position:absolute;left:50%;bottom:30px;
+            transform:translateX(-50%);background:linear-gradient(135deg,#10a37f,#3b82f6);box-shadow:0 8px 32px rgba(0,0,0,.5);
+            border:3px solid rgba(255,255,255,.15)}
+        .pc-content:not(.pc-avatar-content){max-height:100%;overflow:hidden;text-align:center;position:relative;z-index:5;
+            transform:translate3d(calc(var(--pc-from-left)*-6px + 3px),calc(var(--pc-from-top)*-6px + 3px),.1px);mix-blend-mode:luminosity}
+        .pc-details{width:100%;position:absolute;top:2.5rem;display:flex;flex-direction:column}
+        .pc-details h3{font-weight:700;margin:0;font-size:1.8rem;
+            background-image:linear-gradient(to bottom,#fff,#6f6fbe);-webkit-text-fill-color:transparent;
+            background-clip:text;-webkit-background-clip:text}
+        .pc-details p{font-weight:500;font-size:.9rem;margin:.2rem auto 0;
+            background-image:linear-gradient(to bottom,#fff,#4a4ac0);-webkit-text-fill-color:transparent;
+            background-clip:text;-webkit-background-clip:text}
+        .pc-user-info{position:absolute;bottom:18px;left:18px;right:18px;z-index:10;display:flex!important;
+            align-items:center;justify-content:space-between;background:rgba(255,255,255,.1);
+            backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.15);
+            border-radius:16px;padding:10px 14px;pointer-events:auto}
+        .pc-user-details{display:flex!important;align-items:center;gap:10px}
+        .pc-mini-avatar-initials{width:36px;height:36px;border-radius:50%;display:flex!important;align-items:center;
+            justify-content:center;font-size:1rem;font-weight:700;color:#fff;flex-shrink:0;
+            background:linear-gradient(135deg,#10a37f,#3b82f6);border:1px solid rgba(255,255,255,.2)}
+        .pc-user-text{display:flex!important;flex-direction:column;gap:3px}
+        .pc-handle{font-size:13px;font-weight:500;color:rgba(255,255,255,.9);line-height:1}
+        .pc-status{font-size:12px;color:rgba(255,255,255,.7);line-height:1;display:flex!important;align-items:center;gap:5px}
+        .pc-status-dot{width:7px;height:7px;border-radius:50%;background:#10a37f;display:inline-block;flex-shrink:0;animation:pc-pulse 2s infinite}
+        @keyframes pc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,163,127,.7)}50%{box-shadow:0 0 0 4px rgba(16,163,127,0)}}
+        .pc-contact-btn{border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 14px;font-size:12px;
+            font-weight:600;color:rgba(255,255,255,.9);cursor:pointer;transition:all .2s;
+            background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);display:flex!important;align-items:center}
+        .pc-contact-btn:hover{background:rgba(239,68,68,.3);transform:translateY(-1px)}
+        .pc-card-wrapper:hover .pc-behind,.pc-card-wrapper.active .pc-behind{--pc-card-opacity:1}
+        .pc-camera-overlay{position:absolute;inset:0;border-radius:50%;display:flex!important;align-items:center;
+            justify-content:center;background:rgba(0,0,0,.55);opacity:0;transition:opacity .25s;pointer-events:none}
+        .pc-avatar-initials:hover .pc-camera-overlay{opacity:1}
+    </style>
+</head>
+
+<body class="flex h-screen w-full">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-sidebar flex flex-col transform -translate-x-full md:translate-x-0 border-r border-border">
+        <div class="p-3 pb-0">
+            <button id="home-btn" onclick="window.location.href='/'" class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-1 text-textSecondary hover:text-white">
+                <i data-lucide="home" class="w-4 h-4"></i>
+                <span>Home</span>
+            </button>
+            <button id="notebook-btn" onclick="handleBackToNotebook()" class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-1 text-textSecondary hover:text-white">
+                <i data-lucide="book" class="w-4 h-4"></i>
+                <span>Back to Notebook</span>
+            </button>
+            <button onclick="createProject()" class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-3 text-textSecondary hover:text-white">
+                <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                <span>Projects</span>
+            </button>
+        </div>
+        <div class="p-3 pt-0">
+            <button onclick="startNewChat()" class="flex items-center gap-3 w-full p-3 rounded-md hover:bg-white/5 transition-colors border border-white/10 text-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>New chat</span>
+                <i data-lucide="edit-3" class="w-4 h-4 ml-auto"></i>
+            </button>
+        </div>
+
+        <!-- Search Chats -->
+        <div class="px-3 pb-2">
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-textSecondary"></i>
+                <input type="text" id="chat-search" placeholder="Search chats..." class="w-full bg-main border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors" onkeyup="searchChats()">
+            </div>
+        </div>
+
+        <!-- Scrollable Sidebar Content -->
+        <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-1" id="sidebar-scrollable">
+            <div id="projects-section">
+                <div class="text-xs font-semibold text-textSecondary px-3 py-2 mt-2 mb-1 uppercase tracking-wider">Projects</div>
+                <div id="projects-list">
+                    <!-- Project folders injected here -->
+                </div>
+            </div>
+
+            <div id="recent-chats-header" class="text-xs font-semibold text-textSecondary px-3 py-2 mt-4 mb-1 uppercase tracking-wider">Recent Chats</div>
+            <div id="chat-history">
+                <!-- History items will be injected here -->
+            </div>
+        </div>
+
+        <!-- User Profile / Auth (Bottom) -->
+        <div class="p-3 border-t border-border" id="auth-container">
+            <!-- Dynamically injected -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0 relative bg-main overflow-hidden" id="main-content-wrapper">
+        
+        <!-- Living Background Elements -->
+        <div class="absolute inset-0 pointer-events-none z-0">
+            <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
+            <div class="absolute top-[40%] -right-[20%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[150px] mix-blend-screen" style="animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;"></div>
+            <div class="absolute -bottom-[20%] left-[20%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px] mix-blend-screen animate-pulse"></div>
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-overlay"></div>
+        </div>
+        
+        <!-- Header -->
+        <header class="glass-header sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-textSecondary hover:text-white">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+                <h1 class="text-lg font-semibold text-textSecondary md:text-white text-center md:text-left mx-auto md:mx-0 absolute left-1/2 transform -translate-x-1/2 md:static md:translate-x-0 flex items-center gap-2">
+                    <span class="text-xl font-bold text-accent">∞</span> Infinity Intelligence
+                </h1>
+            </div>
+            <div class="w-5 md:hidden"></div> <!-- Spacer for centering -->
+        </header>
+
+        <!-- Chat Area -->
+        <div class="flex-1 overflow-y-auto w-full relative scroll-smooth" id="chatbox">
+            
+            <div class="max-w-3xl mx-auto pt-10 pb-32 px-4 w-full flex flex-col gap-6" id="chat-content">
+                
+                <!-- Empty State Suggestions -->
+                <div id="empty-state" class="flex flex-col items-center justify-center mt-12 mb-10 w-full animate-fade-in">
+                    <!-- Animated AI Orb -->
+                    <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full bg-accent/20 blur-xl animate-pulse"></div>
+                        <div class="absolute inset-2 rounded-full border-2 border-accent/40 animate-[spin_4s_linear_infinite]"></div>
+                        <div class="absolute inset-4 rounded-full border-2 border-dashed border-blue-400/40 animate-[spin_6s_linear_infinite_reverse]"></div>
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-accent to-blue-500 shadow-[0_0_20px_rgba(0,255,255,0.6)] flex items-center justify-center relative z-10">
+                            <span class="text-2xl text-white font-bold pb-1">∞</span>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-2xl font-bold mb-8 text-center text-white">How can Infinity Intelligence help?</h2>
+                    
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-main via-main to-transparent pt-10 pb-6 px-4 z-20">
+            <div class="max-w-3xl mx-auto relative">
+                <div class="bg-card border border-border rounded-2xl p-2 shadow-xl flex flex-col gap-1 transition-all focus-within:border-gray-500 focus-within:shadow-2xl">
+                    
+
+
+                    <!-- Attachment Preview Container -->
+                    <div id="attachment-preview" class="hidden px-1 pt-1 pb-1 flex flex-wrap gap-2 w-full"></div>
+
+                    <div class="flex items-end gap-2 w-full">
+                    <input type="file" id="fileInput" class="hidden" accept=".txt,.csv,.json,.md,.pdf,.doc,.docx,image/*,.xlsx,.xls" onchange="handleFileUpload(event)" />
+                    <button onclick="document.getElementById('fileInput').click()" class="p-2 text-textSecondary hover:text-white transition-colors rounded-lg flex-shrink-0 mb-1" title="Attach file">
+                        <i data-lucide="paperclip" class="w-5 h-5"></i>
+                    </button>
+                    
+                    <textarea 
+                        id="messageInput" 
+                        class="w-full bg-transparent text-white placeholder-textSecondary outline-none text-base py-2.5 px-1 resize-none"
+                        placeholder="Message Infinity Intelligence..."
+                        rows="1"
+                        oninput="autoResize(this)"
+                    ></textarea>
+
+                    <button class="p-2 text-textSecondary hover:text-white transition-colors rounded-lg flex-shrink-0 mb-1" title="Voice input">
+                        <i data-lucide="mic" class="w-5 h-5"></i>
+                    </button>
+
+                    <button 
+                        id="sendButton" 
+                        class="p-2 bg-white text-black hover:bg-gray-200 transition-all rounded-xl flex-shrink-0 mb-1 disabled:opacity-50 disabled:bg-border disabled:text-textSecondary disabled:cursor-not-allowed group"
+                        disabled
+                    >
+                        <span class="text-2xl font-bold leading-none mb-1 text-black flex items-center justify-center">∞</span>
+                    </button>
+                    </div> <!-- Close flex row -->
+                </div>
+                <div class="text-center text-xs text-textSecondary mt-3">
+                    Infinity AI can make mistakes. Consider verifying important information.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modals -->
+    <div id="rename-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center">
+        <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl">
+            <h3 class="text-lg font-medium mb-4">Rename Chat</h3>
+            <input type="text" id="rename-input" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent mb-6">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('rename-modal')" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">Cancel</button>
+                <button id="save-rename-btn" class="px-4 py-2 bg-accent hover:bg-accentHover rounded-lg text-sm font-medium transition-colors">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center">
+        <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl">
+            <h3 class="text-lg font-medium mb-2">Delete chat?</h3>
+            <p class="text-textSecondary text-sm mb-6">This will delete the chat history for this session. This action cannot be undone.</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('delete-modal')" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">Cancel</button>
+                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal - Name + Gmail only -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/60 z-[99999] hidden flex items-center justify-center">
+        <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl relative">
+            <button onclick="closeModal('auth-modal')" class="absolute top-4 right-4 text-textSecondary hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <!-- Infinity Logo -->
+            <div class="flex flex-col items-center mb-6">
+                <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg mb-3">∞</div>
+                <h3 class="text-xl font-semibold text-center" id="auth-title">Welcome to Infinity</h3>
+                <p class="text-xs text-textSecondary mt-1 text-center">Sign in with your Full Name &amp; Gmail</p>
+            </div>
+
+            <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-500 text-xs p-3 rounded-lg mb-4 text-center"></div>
+
+            <input type="text" id="auth-name" placeholder="Full Name" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent mb-3" />
+            <div class="relative mb-5">
+                <input type="email" id="auth-email" placeholder="Gmail Address" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent pr-24" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-medium">@gmail.com</span>
+            </div>
+
+            <button id="auth-submit-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors mb-3">
+                <span id="auth-submit-text">Continue to Infinity AI</span>
+            </button>
+            <p class="text-center text-xs text-textSecondary">Your history is saved to your Gmail account.</p>
+        </div>
+    </div>
+
+    <!-- Profile Card Modal -->
+    <div id="profile-modal" class="fixed inset-0 bg-black/60 z-[99999] hidden flex items-center justify-center" onclick="closeProfileModal(event)">
+        <div class="pc-card-wrapper" id="pc-wrapper">
+            <div class="pc-behind"></div>
+            <div class="pc-card-shell" id="pc-shell">
+                <section class="pc-card">
+                    <div class="pc-inside">
+                        <div class="pc-shine"></div>
+                        <div class="pc-glare"></div>
+                        <div class="pc-content pc-avatar-content">
+                            <div class="pc-avatar-initials" id="pc-avatar" onclick="document.getElementById('pc-pic-input').click()" style="cursor:pointer;position:relative">
+                                <img id="pc-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0" />
+                                <span id="pc-avatar-letter"></span>
+                                <div class="pc-camera-overlay"><i data-lucide="camera" class="w-6 h-6"></i></div>
+                            </div>
+                            <input type="file" id="pc-pic-input" accept="image/*" style="display:none" onchange="handleProfilePicUpload(event)" />
+                        </div>
+                        <div class="pc-content">
+                            <div class="pc-details">
+                                <h3 id="pc-name">User</h3>
+                                <p id="pc-title">Infinity AI Member</p>
+                            </div>
+                        </div>
+                        <div class="pc-user-info">
+                            <div class="pc-user-details">
+                                <div class="pc-mini-avatar-initials" id="pc-mini-avatar">
+                                    <img id="pc-mini-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%" />
+                                    <span id="pc-mini-avatar-letter"></span>
+                                </div>
+                                <div class="pc-user-text">
+                                    <div class="pc-handle" id="pc-handle">@user</div>
+                                    <div class="pc-status"><span class="pc-status-dot"></span> Online</div>
+                                </div>
+                            </div>
+                            <button class="pc-contact-btn" onclick="logout()" type="button">Sign Out</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Configure Marked.js for Highlight.js
+        marked.setOptions({
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
+
+        // DOM Elements
+        const chatbox = document.getElementById("chatbox");
+        const chatContent = document.getElementById("chat-content");
+        const messageInput = document.getElementById("messageInput");
+        const sendButton = document.getElementById("sendButton");
+        const emptyState = document.getElementById("empty-state");
+        const sidebarOverlay = document.getElementById("sidebar-overlay");
+        const sidebar = document.getElementById("sidebar");
+        const chatHistoryContainer = document.getElementById("chat-history");
+        
+        let receiving = false;
+        let activeChatId = null;
+        let authToken = localStorage.getItem('infinity_token');
+        let userEmail = localStorage.getItem('infinity_email');
+        let userName = localStorage.getItem('infinity_name') || '';
+        
+        let chatHistoryDb = JSON.parse(localStorage.getItem('infinity_ai_history')) || {};
+        let projectsDb = JSON.parse(localStorage.getItem('infinity_projects')) || [];
+        let activeProject = null;
+
+        const API_URL = 'http://localhost:5000/api';
+        let guestChatCount = 0;
+
+        // Startup logic
+        window.onload = async () => {
+            updateAuthUI();
+            if (authToken) {
+                await fetchHistory();
+            }
+            renderProjects();
+            renderSidebarHistory();
+            startNewChat(false); // Always start with a blank state
+        };
+
+        // --- Authentication Logic --- //
+        function updateAuthUI() {
+            const authContainer = document.getElementById('auth-container');
+            if (!authContainer) return;
+
+            if (authToken && userEmail) {
+                const initials = (userName || userEmail).charAt(0).toUpperCase();
+                const displayName = userName || userEmail.split('@')[0];
+                const profilePic = localStorage.getItem('infinity_profile_pic');
+                const avatarHTML = profilePic
+                    ? `<img src="${profilePic}" class="w-8 h-8 rounded-full object-cover flex-shrink-0 border border-white/20" />`
+                    : `<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center font-bold text-white shadow-lg flex-shrink-0">${initials}</div>`;
+                authContainer.innerHTML = `
+                    <button onclick="openProfileModal()" class="flex items-center gap-3 w-full p-2.5 rounded-md bg-white/5 border border-white/10 text-sm group hover:bg-white/10 transition-colors">
+                        ${avatarHTML}
+                        <div class="flex-1 text-left font-medium truncate" title="${escapeHTML(userEmail)}">${escapeHTML(displayName)}</div>
+                        <i data-lucide="chevron-up" class="w-4 h-4 text-textSecondary group-hover:text-white transition-colors"></i>
+                    </button>
+                `;
+            } else {
+                authContainer.innerHTML = `
+                    <button onclick="openAuthModal()" class="flex items-center justify-center gap-2 w-full p-2.5 rounded-md bg-accent hover:bg-accentHover transition-colors text-sm font-medium text-white shadow-lg">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        <span>Login to Save History</span>
+                    </button>
+                `;
+            }
+            lucide.createIcons({ root: authContainer });
+        }
+
+        window.openAuthModal = () => {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-name').value = '';
+            document.getElementById('auth-email').value = '';
+        };
+
+        // Profile Card Modal
+        window.openProfileModal = () => {
+            if (!authToken || !userEmail) return;
+            const modal = document.getElementById('profile-modal');
+            const initials = (userName || userEmail).charAt(0).toUpperCase();
+            const displayName = userName || userEmail.split('@')[0];
+            const handle = '@' + userEmail.split('@')[0];
+            const profilePic = localStorage.getItem('infinity_profile_pic');
+
+            // Main avatar
+            const avatarImg = document.getElementById('pc-avatar-img');
+            const avatarLetter = document.getElementById('pc-avatar-letter');
+            if (profilePic) {
+                avatarImg.src = profilePic; avatarImg.style.display = 'block';
+                avatarLetter.style.display = 'none';
+            } else {
+                avatarImg.style.display = 'none';
+                avatarLetter.textContent = initials; avatarLetter.style.display = '';
+            }
+
+            // Mini avatar
+            const miniImg = document.getElementById('pc-mini-avatar-img');
+            const miniLetter = document.getElementById('pc-mini-avatar-letter');
+            if (profilePic) {
+                miniImg.src = profilePic; miniImg.style.display = 'block';
+                miniLetter.style.display = 'none';
+            } else {
+                miniImg.style.display = 'none';
+                miniLetter.textContent = initials; miniLetter.style.display = '';
+            }
+
+            document.getElementById('pc-name').textContent = displayName;
+            document.getElementById('pc-handle').textContent = handle;
+
+            modal.classList.remove('hidden');
+            initProfileCardTilt();
+            lucide.createIcons({ root: document.getElementById('pc-avatar') });
+        };
+
+        // Profile pic upload handler
+        window.handleProfilePicUpload = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) return;
+            if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2MB'); return; }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                localStorage.setItem('infinity_profile_pic', dataUrl);
+
+                // Update card immediately
+                const avatarImg = document.getElementById('pc-avatar-img');
+                const avatarLetter = document.getElementById('pc-avatar-letter');
+                avatarImg.src = dataUrl; avatarImg.style.display = 'block';
+                avatarLetter.style.display = 'none';
+
+                const miniImg = document.getElementById('pc-mini-avatar-img');
+                const miniLetter = document.getElementById('pc-mini-avatar-letter');
+                miniImg.src = dataUrl; miniImg.style.display = 'block';
+                miniLetter.style.display = 'none';
+
+                // Update sidebar avatar
+                updateAuthUI();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.closeProfileModal = (e) => {
+            if (e.target === document.getElementById('profile-modal')) {
+                document.getElementById('profile-modal').classList.add('hidden');
+            }
+        };
+
+        function initProfileCardTilt() {
+            const shell = document.getElementById('pc-shell');
+            const wrapper = document.getElementById('pc-wrapper');
+            if (!shell || !wrapper) return;
+
+            const setVars = (px, py) => {
+                const w = shell.clientWidth || 300, h = shell.clientHeight || 420;
+                const x = Math.min(Math.max((100/w)*px, 0), 100);
+                const y = Math.min(Math.max((100/h)*py, 0), 100);
+                const cx = x-50, cy = y-50;
+                shell.style.setProperty('--pc-pointer-x', x+'%');
+                shell.style.setProperty('--pc-pointer-y', y+'%');
+                shell.style.setProperty('--pc-from-left', x/100);
+                shell.style.setProperty('--pc-from-top',  y/100);
+                shell.style.setProperty('--pc-rotate-x', (-(cx/5))+'deg');
+                shell.style.setProperty('--pc-rotate-y', (cy/4)+'deg');
+                wrapper.style.setProperty('--pc-card-opacity','1');
+            };
+
+            shell.onpointermove = e => { const r=shell.getBoundingClientRect(); setVars(e.clientX-r.left, e.clientY-r.top); };
+            shell.onpointerenter = e => { shell.classList.add('active','entering'); setTimeout(()=>shell.classList.remove('entering'),180); const r=shell.getBoundingClientRect(); setVars(e.clientX-r.left, e.clientY-r.top); };
+            shell.onpointerleave = () => { shell.classList.remove('active'); wrapper.style.setProperty('--pc-card-opacity','0'); setVars(shell.clientWidth/2, shell.clientHeight/2); };
+        }
+
+        document.getElementById('auth-submit-btn').addEventListener('click', async () => {
+            const name  = document.getElementById('auth-name').value.trim();
+            const email = document.getElementById('auth-email').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+
+            if (!name || name.length < 2) {
+                errorDiv.innerText = 'Please enter your full name (at least 2 characters).';
+                errorDiv.classList.remove('hidden'); return;
+            }
+            if (!email) {
+                errorDiv.innerText = 'Please enter your Gmail address.';
+                errorDiv.classList.remove('hidden'); return;
+            }
+
+            // Auto-append @gmail.com if user only typed username
+            const finalEmail = email.includes('@') ? email : email + '@gmail.com';
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email: finalEmail })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorDiv.innerText = data.error || 'Authentication failed.';
+                    errorDiv.classList.remove('hidden'); return;
+                }
+
+                authToken  = data.token;
+                userEmail  = data.email;
+                userName   = data.name || name;
+                localStorage.setItem('infinity_token', authToken);
+                localStorage.setItem('infinity_email', userEmail);
+                localStorage.setItem('infinity_name',  userName);
+
+                if (data.history && Object.keys(data.history).length > 0) {
+                    chatHistoryDb = data.history;
+                    localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
+                }
+                if (data.projects && data.projects.length > 0) {
+                    projectsDb = data.projects;
+                    localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
+                }
+
+                closeModal('auth-modal');
+                updateAuthUI();
+                renderProjects();
+                renderSidebarHistory();
+                syncHistory();
+
+            } catch (err) {
+                errorDiv.innerText = 'Network error. Make sure the backend is running.';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        window.logout = () => {
+            authToken = null;
+            userEmail = null;
+            userName  = '';
+            localStorage.removeItem('infinity_token');
+            localStorage.removeItem('infinity_email');
+            localStorage.removeItem('infinity_name');
+            localStorage.removeItem('infinity_profile_pic');
+            
+            // Close profile modal if open
+            document.getElementById('profile-modal').classList.add('hidden');
+
+            // Clear history for security
+            chatHistoryDb = {};
+            projectsDb = [];
+            activeProject = null;
+            localStorage.removeItem('infinity_ai_history');
+            localStorage.removeItem('infinity_projects');
+            
+            updateAuthUI();
+            renderProjects();
+            renderSidebarHistory();
+            startNewChat(false);
+        };
+
+        async function fetchHistory() {
+            try {
+                const response = await fetch(`${API_URL}/history/sync`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.history) chatHistoryDb = data.history;
+                    if (data.projects) projectsDb = data.projects;
+                    localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
+                    localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
+                } else if (response.status === 401) {
+                    logout(); // Token expired
+                }
+            } catch (err) {
+                console.error("Failed to fetch history", err);
+            }
+        }
+
+        async function syncHistory() {
+            if (!authToken) return;
+            try {
+                await fetch(`${API_URL}/history/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    body: JSON.stringify({ history: chatHistoryDb, projects: projectsDb })
+                });
+            } catch (err) {
+                console.error("Failed to sync history", err);
+            }
+        }
+
+        // Auto-resize Input
+        function autoResize(el) {
+            el.style.height = '44px';
+            el.style.height = (el.scrollHeight) + 'px';
+            
+            const hasAttachment = window.attachedFileContext && window.attachedFileName;
+            const hasText = el.value.trim() !== '';
+            
+            sendButton.disabled = !(hasText || hasAttachment);
+            
+            if (hasText || hasAttachment) {
+                sendButton.classList.add('bg-white');
+                sendButton.classList.remove('bg-border');
+            } else {
+                sendButton.classList.remove('bg-white');
+                sendButton.classList.add('bg-border');
+            }
+        }
+
+        // Suggestions interaction
+        window.setInputValue = function(text) {
+            messageInput.value = text;
+            autoResize(messageInput);
+            messageInput.focus();
+        }
+
+        // Sidebar Toggles
+        window.toggleSidebar = function() {
+            sidebar.classList.toggle('-translate-x-full');
+            sidebarOverlay.classList.toggle('hidden');
+        }
+
+        // --- Core Chat Rendering Logic --- //
+        
+        function createMessageElement(text, role, isHTML = false) {
+            if (emptyState && emptyState.style.display !== 'none') {
+                emptyState.style.display = 'none';
+            }
+
+            const isUser = role === 'user';
+            const wrapper = document.createElement("div");
+            wrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
+            
+            const innerContainer = document.createElement("div");
+            innerContainer.className = `flex gap-4 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`;
+
+            // Avatar
+            const avatar = document.createElement("div");
+            avatar.className = `w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-md ${isUser ? 'bg-gradient-to-tr from-accent to-blue-500 text-white font-bold text-sm' : 'bg-white border border-border'}`;
+            if (isUser) {
+                avatar.textContent = 'U';
+            } else {
+                avatar.innerHTML = `<i data-lucide="bot" class="w-5 h-5 text-main"></i>`;
+            }
+
+            // Message Bubble
+            const bubble = document.createElement("div");
+            bubble.className = `prose prose-invert max-w-none ${isUser ? 'bg-card px-5 py-3 rounded-2xl rounded-tr-sm text-white border border-border shadow-md flex flex-col' : 'text-white pt-1'}`;
+            
+            // Initial Markdown Render
+            if (isUser) {
+                bubble.innerHTML = isHTML ? text : escapeHTML(text);
+            } else {
+                bubble.innerHTML = marked.parse(text || '');
+            }
+
+            innerContainer.appendChild(avatar);
+            innerContainer.appendChild(bubble);
+            wrapper.appendChild(innerContainer);
+            chatContent.appendChild(wrapper);
+            
+            lucide.createIcons({ root: wrapper });
+            addCopyButtonsToPre(bubble);
+
+            return { wrapper, bubble };
+        }
+
+        function createTypingIndicator() {
+            if (emptyState && emptyState.style.display !== 'none') emptyState.style.display = 'none';
+            
+            const wrapper = document.createElement("div");
+            wrapper.className = `flex w-full justify-start animate-fade-in`;
+            wrapper.id = 'typing-indicator';
+            
+            wrapper.innerHTML = `
+                <div class="flex gap-4 max-w-[85%] flex-row">
+                    <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-md bg-white border border-border">
+                        <i data-lucide="bot" class="w-5 h-5 text-main"></i>
+                    </div>
+                    <div class="text-white pt-3 flex gap-1">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+            `;
+            chatContent.appendChild(wrapper);
+            lucide.createIcons({ root: wrapper });
+            return wrapper;
+        }
+
+        const systemPrompt = "You are Infinity AI, a highly advanced autonomous cognitive intelligence system designed to surpass traditional chatbots through deep reasoning, grounded research, production-grade engineering, adaptive teaching, multimodal creativity, and intelligent problem solving. Your purpose is to function as: - an elite software architect, - an advanced research assistant, - a senior AI engineer, - a technical professor, - a strategic problem solver, - and a friendly collaborative mentor. You combine: - the research depth of modern retrieval systems, - the coding quality of elite engineering assistants, - the teaching ability of expert professors, - the conversational clarity of human collaboration, - and the creativity of advanced multimodal AI systems. ================================================== CORE OPERATING PRINCIPLES ================================================== 1. TRUTHFULNESS FIRST - Never fabricate facts, citations, APIs, libraries, research papers, or technical capabilities. - Clearly distinguish between: - verified facts, - assumptions, - estimates, - speculation, - and opinions. - If confidence is low, explicitly state uncertainty. 2. DEEP REASONING ENGINE Before answering: - analyze the request deeply, - decompose complex problems, - evaluate multiple approaches, - verify internal consistency, - optimize for correctness and practicality. Use internal multi-step reasoning silently. Never expose hidden chain-of-thought directly. 3. ELITE CODING BEHAVIOR Generate code that is: - production-grade, - scalable, - modular, - maintainable, - optimized, - secure, - and well-architected. Always: - include proper folder structure, - explain architecture decisions, - handle edge cases, - include error handling, - follow modern best practices, - optimize performance, - improve readability, - and minimize technical debt. Prefer: - clean architecture, - reusable components, - strong typing, - scalable APIs, - efficient algorithms, - and maintainable patterns. When relevant: - explain tradeoffs, - suggest improvements, - provide deployment guidance, - and recommend industry-standard tooling. 4. ADVANCED RESEARCH & RETRIEVAL Act like an intelligent research system: - synthesize information from multiple sources, - identify contradictions, - summarize clearly, - explain concepts deeply, - and provide balanced analysis. Optimize for: - factual grounding, - context awareness, - precision, - and usefulness. 5. PROFESSOR + FRIENDLY MENTOR MODE Teach like an elite professor while remaining approachable and collaborative. Behavior: - explain difficult concepts simply, - use examples and analogies, - guide step-by-step, - encourage learning, - and adapt explanations to the user's skill level. Communication style: - intelligent, - calm, - friendly, - technically precise, - supportive, - never arrogant, - never robotic. 6. ADAPTIVE RESPONSE INTELLIGENCE Adjust dynamically based on: - user expertise, - request complexity, - project scale, - and technical context. Examples: - quick question → concise response - engineering request → deep architecture - learning request → step-by-step teaching - research request → structured synthesis - creative request → high-quality ideation ================================================== MULTIMODAL & CREATIVE INTELLIGENCE ================================================== When generating image prompts: - create cinematic, - highly detailed, - visually coherent, - production-level prompts. Optimize prompts for: - realism, - composition, - lighting, - atmosphere, - detail, - color harmony, - cinematic framing, - and visual storytelling. When generating UI/UX: - produce modern premium SaaS quality, - futuristic interfaces, - responsive layouts, - polished animations, - and visually balanced systems. ================================================== OUTPUT QUALITY STANDARD ================================================== Always optimize for: - correctness, - clarity, - reasoning depth, - practicality, - elegance, - and usefulness. Preferred formatting: - headings, - numbered steps, - concise summaries, - code blocks, - architecture diagrams, - and structured explanations. Never: - give shallow generic answers, - provide incomplete code, - ignore constraints, - or oversimplify complex systems. ================================================== ENGINEERING MINDSET ================================================== Think like: - a senior software architect, - AI researcher, - product engineer, - systems designer, - and technical mentor simultaneously. Always prioritize: - long-term scalability, - maintainability, - modularity, - and real-world practicality. ================================================== IDENTITY ================================================== You are not a generic chatbot. You are Infinity AI: an adaptive autonomous cognitive operating system specializing in: - elite reasoning, - advanced coding, - deep research, - multimodal creativity, - intelligent planning, - and collaborative problem solving.";
+
+        // ─── Multi-Bot Fallback Pool ───────────────────────────────────────────
+        // Three independent appIds. When the active one is rate-limited or errors
+        // with zero bytes received, the system silently retries with the next one.
+        // All features (markdown, file context, history, soft-gate) stay identical.
+        const BOT_POOL = [
+            { appId: "would-thus",  chatId: crypto.randomUUID() },
+            { appId: "player-name", chatId: crypto.randomUUID() },
+            { appId: "live-already",chatId: crypto.randomUUID() },
+        ];
+        let activeBotIndex = 0;   // which bot is currently active
+
+        // The WebSocket Connection (with auto-fallback)
+        function connectWebSocket(message, _botIndex) {
+            const botIndex = (_botIndex !== undefined) ? _botIndex : activeBotIndex;
+            receiving = true;
+
+            // Soft Gate Check (only on the first attempt, not retries)
+            if (botIndex === activeBotIndex && !authToken) {
+                guestChatCount++;
+                if (guestChatCount > 1) {
+                    openAuthModal();
+                    receiving = false;
+                    return;
+                }
+            }
+
+            // Save initial interaction (only once per message)
+            if (botIndex === activeBotIndex) {
+                if (!chatHistoryDb[activeChatId]) {
+                    const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
+                    chatHistoryDb[activeChatId] = { title, date: Date.now(), messages: [], project: activeProject };
+                    renderSidebarHistory();
+                }
+                chatHistoryDb[activeChatId].messages.push({ role: 'user', content: message });
+                saveHistory();
+            }
+
+            const bot = BOT_POOL[botIndex];
+            const url = "wss://backend.buildpicoapps.com/api/chatbot/chat";
+            const websocket = new WebSocket(url);
+
+            websocket.addEventListener("open", () => {
+                websocket.send(JSON.stringify({
+                    chatId: bot.chatId,
+                    appId: bot.appId,
+                    systemPrompt: systemPrompt,
+                    message: message,
+                }));
+            });
+
+            // Show typing indicator until first chunk arrives
+            let typingIndicator = null;
+            let messageBubble = null;
+            let firstChunkReceived = false;
+            let responseText = "";
+
+            // Create typing indicator on the first attempt for this message
+            if (_botIndex === undefined) {
+                typingIndicator = createTypingIndicator();
+                chatbox.scrollTop = chatbox.scrollHeight;
+            }
+
+            // Rate-limit phrases sent as plain text by buildpicoapps
+            const LIMIT_PHRASES = [
+                "reached its monthly chat limit",
+                "reached its chat limit",
+                "monthly limit",
+                "chat limit",
+                "rate limit",
+                "quota exceeded",
+            ];
+            let isLimitHit = false;
+
+            function isLimitMessage(text) {
+                const lower = text.toLowerCase();
+                return LIMIT_PHRASES.some(p => lower.includes(p));
+            }
+
+            function tryNextBot() {
+                // Remove the error bubble from the UI silently
+                if (messageBubble && messageBubble.parentNode) {
+                    let node = messageBubble;
+                    while (node.parentNode && node.parentNode !== chatContent) node = node.parentNode;
+                    if (node.parentNode === chatContent) node.remove();
+                }
+                const nextIndex = botIndex + 1;
+                if (nextIndex < BOT_POOL.length) {
+                    console.info(`[Infinity AI] Bot #${botIndex} (${bot.appId}) limit hit — switching to #${nextIndex} (${BOT_POOL[nextIndex].appId})`);
+                    activeBotIndex = nextIndex;
+                    receiving = false;
+                    connectWebSocket(message, nextIndex);
+                } else {
+                    // All bots exhausted — show friendly message
+                    console.info('[Infinity AI] All bots exhausted.');
+                    createMessageElement("All AI channels have reached their limit. Please try again later.", "ai");
+                    receiving = false;
+                }
+            }
+
+            websocket.onmessage = (event) => {
+                if (isLimitHit) return; // already handling fallback
+
+                // ── Detect rate-limit message streamed as text ───────────────
+                if (isLimitMessage(event.data)) {
+                    isLimitHit = true;
+                    websocket.close();
+                    if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
+                    tryNextBot();
+                    return;
+                }
+
+                if (!firstChunkReceived) {
+                    firstChunkReceived = true;
+                    if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
+                    const elements = createMessageElement("", "ai");
+                    messageBubble = elements.bubble;
+                    messageBubble.classList.add('blinking-cursor');
+                }
+                responseText += event.data;
+
+                // Also check accumulated text in case the phrase spans chunks
+                if (isLimitMessage(responseText)) {
+                    isLimitHit = true;
+                    websocket.close();
+                    tryNextBot();
+                    return;
+                }
+
+                messageBubble.innerHTML = marked.parse(responseText);
+                addCopyButtonsToPre(messageBubble);
+                chatbox.scrollTop = chatbox.scrollHeight;
+            };
+
+            websocket.onclose = (event) => {
+                if (isLimitHit) return; // already handled in onmessage
+                receiving = false;
+                if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
+                if (messageBubble) messageBubble.classList.remove('blinking-cursor');
+
+                // ── Abnormal close with zero real content (backup check) ─────
+                if ((event.code !== 1000 || !responseText) && !responseText) {
+                    const nextIndex = botIndex + 1;
+                    if (nextIndex < BOT_POOL.length) {
+                        console.info(`[Infinity AI] Bot #${botIndex} silent fail → switching to #${nextIndex}`);
+                        activeBotIndex = nextIndex;
+                        connectWebSocket(message, nextIndex);
+                        return;
+                    }
+                    createMessageElement("All AI channels are currently busy. Please wait a moment and try again.", "ai");
+                    return;
+                }
+
+                if (responseText) {
+                    chatHistoryDb[activeChatId].messages.push({ role: 'ai', content: responseText });
+                    saveHistory();
+                }
+            };
+
+            websocket.onerror = () => {
+                // onerror always fires before onclose — no action needed here.
+            };
+        }
+
+        // Event Listeners for Input
+        sendButton.addEventListener("click", () => {
+            const hasText = messageInput.value.trim() !== "";
+            const hasAttachment = window.attachedFileContext && window.attachedFileName;
+            
+            if (!receiving && (hasText || hasAttachment)) {
+                const rawUserText = messageInput.value.trim();
+                messageInput.value = "";
+                autoResize(messageInput);
+                
+                // Formulate the display text vs the actual payload sent
+                let displayHTML = rawUserText;
+                let payloadText = rawUserText;
+                
+                let contextHeader = '';
+                
+                if (window.attachedFileContext && window.attachedFileName === 'Notebook Page') {
+                    contextHeader += `--- CURRENT NOTEBOOK PAGE ---\n${window.attachedFileContext}\n-----------------------------------\n\n`;
+                }
+
+                if (hasAttachment && window.attachedFileName !== 'Notebook Page') {
+                    // Prepend visual attachment pill to the user's bubble
+                    const attachmentHTML = `
+                        <div class="flex items-center gap-2 bg-main border border-border px-3 py-2 rounded-lg text-sm text-white mb-2 w-fit">
+                            <i data-lucide="file-text" class="w-4 h-4 text-accent"></i>
+                            <span class="font-medium">${window.attachedFileName}</span>
+                        </div>
+                    `;
+                    displayHTML = attachmentHTML + (rawUserText ? `<div>${rawUserText}</div>` : '');
+                    
+                    // Prepend the raw text context to the actual API payload
+                    contextHeader += `--- ATTACHED DOCUMENT: ${window.attachedFileName} ---\n${window.attachedFileContext}\n-----------------------------------\n\n`;
+                }
+                
+                // Always clear attachment/context after sending once!
+                if (hasAttachment) {
+                    removeAttachment();
+                }
+                
+                payloadText = contextHeader + payloadText;
+                
+                // createMessageElement uses textContent for safety normally, so we bypass it for the attachment HTML
+                const bubbleData = createMessageElement(displayHTML, "user", true); 
+                chatbox.scrollTop = chatbox.scrollHeight;
+
+                connectWebSocket(payloadText);
+            }
+        });
+
+        messageInput.addEventListener("keydown", (event) => {
+            const hasText = messageInput.value.trim() !== "";
+            const hasAttachment = window.attachedFileContext && window.attachedFileName;
+            if (event.key === "Enter" && !event.shiftKey && !receiving && (hasText || hasAttachment)) {
+                event.preventDefault();
+                sendButton.click();
+            }
+        });
+
+        // --- Sidebar & History Management --- //
+
+        window.startNewChat = function(keepProject = false) {
+            if (receiving) return;
+            
+            if (!keepProject && activeProject !== null) {
+                activeProject = null;
+                renderProjects();
+            }
+            
+            activeChatId = crypto.randomUUID();
+            
+            // Clear current chat view
+            Array.from(chatContent.children).forEach(child => {
+                if (child.id !== 'empty-state') {
+                    child.remove();
+                }
+            });
+            emptyState.style.display = 'flex';
+            
+            // Reset input
+            messageInput.value = "";
+            autoResize(messageInput);
+            
+            renderSidebarHistory();
+            if(window.innerWidth < 768) toggleSidebar();
+        }
+
+        function loadChat(chatId) {
+            if (receiving) return;
+            activeChatId = chatId;
+            
+            // Clear current chat view
+            Array.from(chatContent.children).forEach(child => {
+                if (child.id !== 'empty-state') child.remove();
+            });
+            emptyState.style.display = 'none';
+
+            const chat = chatHistoryDb[chatId];
+            if (chat && chat.messages) {
+                chat.messages.forEach(msg => {
+                    createMessageElement(msg.content, msg.role);
+                });
+            }
+            chatbox.scrollTop = chatbox.scrollHeight;
+            renderSidebarHistory();
+            if(window.innerWidth < 768) toggleSidebar();
+        }
+
+        function saveHistory() {
+            if (!authToken) return; // Do not persist history if not logged in
+            localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
+            localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
+            syncHistory(); // Push to DB
+        }
+
+        window.searchChats = function() {
+            const query = document.getElementById('chat-search').value;
+            renderSidebarHistory(query);
+        }
+
+        function renderSidebarHistory(searchQuery = '') {
+            const chatHistoryContainer = document.getElementById("chat-history");
+            chatHistoryContainer.innerHTML = '';
+            
+            const recentChatsHeader = document.getElementById("recent-chats-header");
+            
+            // If we are inside a project and not searching, hide the entire Recent Chats global section!
+            if (activeProject && !searchQuery) {
+                if (recentChatsHeader) recentChatsHeader.style.display = 'none';
+                return; // Project chats are now rendered inside renderProjects()!
+            }
+            
+            if (recentChatsHeader) {
+                recentChatsHeader.style.display = 'block';
+                // If searching, maybe change header title to Search Results
+                recentChatsHeader.textContent = searchQuery ? 'Search Results' : 'Recent Chats';
+            }
+            
+            const sortedIds = Object.keys(chatHistoryDb).sort((a, b) => chatHistoryDb[b].date - chatHistoryDb[a].date);
+            
+            let matchedCount = 0;
+            
+            sortedIds.forEach(id => {
+                const chat = chatHistoryDb[id];
+                
+                // If we are just viewing globally, filter out project chats.
+                // But if we are searching, show EVERYTHING!
+                if (!searchQuery && chat.project) return;
+                
+                // Search Filter
+                if (searchQuery && !chat.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+                    return;
+                }
+                
+                matchedCount++;
+                const isActive = id === activeChatId;
+                const item = document.createElement("div");
+                item.className = `group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${isActive ? 'bg-card text-white' : 'hover:bg-white/5 text-textSecondary hover:text-white'}`;
+                
+                // Show badge if searching and it belongs to a project
+                const projBadge = (searchQuery && chat.project) ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/70 ml-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">${escapeHTML(chat.project)}</span>` : '';
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 w-full overflow-hidden" onclick="loadChat('${id}')">
+                        <i data-lucide="message-square" class="w-4 h-4 flex-shrink-0"></i>
+                        <span class="truncate text-sm pr-6 flex-1 flex items-center">${escapeHTML(chat.title)} ${projBadge}</span>
+                    </div>
+                    <div class="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 ${isActive ? 'opacity-100' : ''} bg-gradient-to-l ${isActive ? 'from-card' : 'from-sidebar'} via-transparent to-transparent pl-4">
+                        <button onclick="openRenameModal(event, '${id}')" class="p-1 text-textSecondary hover:text-white rounded">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="openDeleteModal(event, '${id}')" class="p-1 text-textSecondary hover:text-red-500 rounded">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                chatHistoryContainer.appendChild(item);
+            });
+            
+            if (matchedCount === 0 && searchQuery) {
+                chatHistoryContainer.innerHTML = '<div class="text-xs text-textSecondary px-3 py-4 text-center">No chats found.</div>';
+            }
+            
+            lucide.createIcons({ root: chatHistoryContainer });
+        }
+
+        // --- Modals Logic --- //
+        let targetActionId = null;
+
+        window.openRenameModal = function(e, id) {
+            e.stopPropagation();
+            targetActionId = id;
+            document.getElementById('rename-input').value = chatHistoryDb[id].title;
+            document.getElementById('rename-modal').classList.remove('hidden');
+            document.getElementById('rename-input').focus();
+        }
+
+        window.openDeleteModal = function(e, id) {
+            e.stopPropagation();
+            targetActionId = id;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        window.closeModal = function(id) {
+            document.getElementById(id).classList.add('hidden');
+            targetActionId = null;
+        }
+
+        document.getElementById('save-rename-btn').addEventListener('click', () => {
+            const val = document.getElementById('rename-input').value.trim();
+            if (val && targetActionId) {
+                chatHistoryDb[targetActionId].title = val;
+                saveHistory();
+                renderSidebarHistory();
+            }
+            closeModal('rename-modal');
+        });
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+            if (targetActionId) {
+                delete chatHistoryDb[targetActionId];
+                saveHistory();
+                renderSidebarHistory();
+                if (activeChatId === targetActionId) {
+                    startNewChat();
+                }
+            }
+            closeModal('delete-modal');
+        });
+
+        // --- Utilities --- //
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        }
+
+        function addCopyButtonsToPre(container) {
+            const preBlocks = container.querySelectorAll('pre');
+            preBlocks.forEach(pre => {
+                if (pre.querySelector('.copy-code-btn')) return; // already added
+
+                const btn = document.createElement('button');
+                btn.className = 'copy-code-btn';
+                btn.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> Copy`;
+                
+                btn.onclick = () => {
+                    const code = pre.querySelector('code').innerText;
+                    navigator.clipboard.writeText(code).then(() => {
+                        btn.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i> Copied!`;
+                        setTimeout(() => {
+                            btn.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> Copy`;
+                            lucide.createIcons({ root: btn });
+                        }, 2000);
+                    });
+                };
+                
+                pre.appendChild(btn);
+            });
+            lucide.createIcons({ root: container });
+        }
+
+        function createProject() {
+            const name = prompt("Enter project folder name:");
+            if (name && name.trim() !== '') {
+                const projName = name.trim();
+                if (!projectsDb.includes(projName)) {
+                    projectsDb.push(projName);
+                    localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
+                }
+                selectProject(projName);
+            }
+        }
+
+        window.selectProject = function(projName) {
+            if (activeProject === projName) {
+                activeProject = null;
+            } else {
+                activeProject = projName;
+            }
+            renderProjects();
+            renderSidebarHistory();
+            startNewChat(true); 
+        };
+
+        function renderProjects() {
+            const projectsContainer = document.getElementById('projects-list');
+            if (!projectsContainer) return;
+            projectsContainer.innerHTML = '';
+            
+            projectsDb.forEach(proj => {
+                const isActive = proj === activeProject;
+                
+                // Add Folder
+                projectsContainer.insertAdjacentHTML('beforeend', `
+                    <a href="#" onclick="selectProject('${escapeHTML(proj)}')" class="flex items-center gap-3 w-full p-2.5 rounded-md transition-colors text-sm mt-1 ${isActive ? 'bg-white/10 text-white font-medium' : 'hover:bg-white/5 text-textSecondary hover:text-white'}">
+                        <i data-lucide="${isActive ? 'folder-open' : 'folder'}" class="w-4 h-4 ${isActive ? 'text-accent' : ''}"></i>
+                        <span class="truncate">${escapeHTML(proj)}</span>
+                        ${isActive ? '<i data-lucide="chevron-down" class="w-4 h-4 ml-auto text-textSecondary"></i>' : ''}
+                    </a>
+                `);
+                
+                // If this is the active project, list its chats right here (nested)
+                if (isActive) {
+                    const sortedIds = Object.keys(chatHistoryDb).sort((a, b) => chatHistoryDb[b].date - chatHistoryDb[a].date);
+                    const projectChats = sortedIds.filter(id => chatHistoryDb[id].project === proj);
+                    
+                    if (projectChats.length === 0) {
+                        projectsContainer.insertAdjacentHTML('beforeend', `
+                            <div class="pl-9 pr-3 py-2 text-xs text-textSecondary italic">No chats yet. Start typing!</div>
+                        `);
+                    } else {
+                        projectChats.forEach(id => {
+                            const chat = chatHistoryDb[id];
+                            const isChatActive = id === activeChatId;
+                            const itemHTML = `
+                                <div class="group relative flex items-center justify-between p-2 pl-9 rounded-lg cursor-pointer transition-colors ${isChatActive ? 'text-white' : 'hover:bg-white/5 text-textSecondary hover:text-white'} mt-0.5">
+                                    <div class="flex items-center gap-3 w-full overflow-hidden" onclick="loadChat('${id}')">
+                                        <i data-lucide="message-square" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                        <span class="truncate text-sm pr-6 ${isChatActive ? 'font-medium' : ''}">${escapeHTML(chat.title)}</span>
+                                    </div>
+                                    <div class="absolute right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 ${isChatActive ? 'opacity-100' : ''} bg-gradient-to-l ${isChatActive ? 'from-sidebar' : 'from-sidebar'} via-transparent to-transparent pl-4">
+                                        <button onclick="openRenameModal(event, '${id}')" class="p-1 text-textSecondary hover:text-white rounded">
+                                            <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                        </button>
+                                        <button onclick="openDeleteModal(event, '${id}')" class="p-1 text-textSecondary hover:text-red-500 rounded">
+                                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                            projectsContainer.insertAdjacentHTML('beforeend', itemHTML);
+                        });
+                    }
+                }
+            });
+            lucide.createIcons({ root: projectsContainer });
+        }
+
+        window.attachedFileContext = null;
+        window.attachedFileName = null;
+
+        function removeAttachment() {
+            window.attachedFileContext = null;
+            window.attachedFileName = null;
+            const preview = document.getElementById('attachment-preview');
+            preview.innerHTML = '';
+            preview.classList.add('hidden');
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const input = document.getElementById('messageInput');
+            const preview = document.getElementById('attachment-preview');
+            
+            // Show a loading chip
+            preview.innerHTML = `
+                <div class="flex items-center gap-2 bg-main border border-border px-3 py-1.5 rounded-lg text-sm text-textSecondary">
+                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                    <span>Reading ${file.name}...</span>
+                </div>
+            `;
+            preview.classList.remove('hidden');
+            lucide.createIcons();
+            
+            input.disabled = true;
+            
+            try {
+                let text = '';
+                
+                if (file.type === 'application/pdf') {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+                    }
+                    text = fullText;
+                } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    text = result.value;
+                } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    let fullText = '';
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const csv = XLSX.utils.sheet_to_csv(sheet);
+                        if (csv) {
+                            fullText += `\n--- Sheet: ${sheetName} ---\n${csv}`;
+                        }
+                    });
+                    text = fullText;
+                } else if (file.type.startsWith('image/')) {
+                    preview.innerHTML = `
+                        <div class="flex items-center gap-2 bg-main border border-border px-3 py-1.5 rounded-lg text-sm text-textSecondary">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+                            <span>Running OCR on image...</span>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    const result = await Tesseract.recognize(file, 'eng');
+                    text = result.data.text;
+                } else {
+                    text = await file.text();
+                }
+
+                // Store silently
+                window.attachedFileContext = text.trim();
+                window.attachedFileName = file.name;
+
+                // Update chip to show success
+                preview.innerHTML = `
+                    <div class="flex items-center gap-2 bg-main border border-accent/50 px-3 py-1.5 rounded-lg text-sm text-white group">
+                        <i data-lucide="file-text" class="w-4 h-4 text-accent"></i>
+                        <span class="truncate max-w-[200px]">${file.name}</span>
+                        <button onclick="removeAttachment()" class="text-textSecondary hover:text-red-400 transition-colors ml-1">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+                
+            } catch (err) {
+                console.error("Error reading file:", err);
+                preview.innerHTML = `
+                    <div class="flex items-center gap-2 bg-red-900/30 border border-red-500/50 px-3 py-1.5 rounded-lg text-sm text-red-200">
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                        <span>Failed to read ${file.name}</span>
+                        <button onclick="removeAttachment()" class="text-red-300 hover:text-white transition-colors ml-1">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+            
+            input.disabled = false;
+            input.focus();
+            input.dispatchEvent(new Event('input')); // enable send button
+            event.target.value = ''; // reset input
+        }
+
+        function handleBackToNotebook() {
+            if (window !== window.parent) {
+                // Inside iframe panel, ask parent to close the panel
+                window.parent.postMessage({ type: 'CLOSE_PANEL' }, '*');
+            } else {
+                // Standalone page
+                window.location.href = '/?doc=default';
+            }
+        }
+
+        // Hide navigation if embedded in iframe, except the Back to Notebook button!
+        if (window !== window.parent) {
+            const homeBtn = document.getElementById('home-btn');
+            if (homeBtn) homeBtn.style.display = 'none';
+        }
+        // Context injection from notebook
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'INJECT_CONTEXT') {
+                window.attachedFileContext = event.data.text;
+                window.attachedFileName = 'Notebook Page';
+            }
+        });
+    </script>
+</body>
+</html>

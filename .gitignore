@@ -1,3 +1,11 @@
+# Environment secrets — NEVER push these
+.env
+.env.local
+.env.production
+backend/.env
+!.env.example
+!backend/.env.example
+
 # Logs
 logs
 *.log

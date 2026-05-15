@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Send, Type, PenTool, Edit2, Highlighter, Mic } from 'lucide-react';
-
+import React, { useState, useRef as useRefCB } from "react";
+import { Send, Type, PenTool, Edit2, Highlighter, Mic, ImagePlus, Home, Settings } from 'lucide-react';
+import Dock from './Dock';
 const FONTS = [
   'Caveat', 'Dancing Script', 'Indie Flower', 
   'Shadows Into Light', 'Pacifico', 'Amatic SC', 
@@ -12,7 +12,8 @@ const PEN_COLORS = ['#000000', '#1F51FF', '#FF3131', '#00BF63', '#9D4EDD', '#FF9
 const HIGHLIGHTER_COLORS = ['#FFEA00', '#FF3131', '#000000'];
 
 export default function ChatBar({ 
-  addText, 
+  addText,
+  addImage,
   mode, setMode, 
   activeTool, setActiveTool, 
   activeColor, setActiveColor,
@@ -21,6 +22,38 @@ export default function ChatBar({
   const [input, setInput] = useState("");
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const fileInputRef = useRefCB(null);
+
+  // Read a File/Blob and call addImage with a base64 data URL
+  const insertImageFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (addImage) addImage(ev.target.result, file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle file picker selection
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) insertImageFile(file);
+    e.target.value = ''; // reset so same file can be picked again
+  };
+
+  // Handle Ctrl+V / Cmd+V paste with an image in the clipboard
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        insertImageFile(item.getAsFile());
+        return;
+      }
+    }
+    // plain text paste — let the input handle it normally
+  };
 
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -93,7 +126,9 @@ export default function ChatBar({
       
       rec.onresult = (e) => {
          const text = e.results[0][0].transcript;
-         setInput(prev => prev + (prev ? " " : "") + text);
+         if (text.trim()) {
+           addText(text);
+         }
       };
       
       rec.start();
@@ -197,34 +232,25 @@ export default function ChatBar({
         </button>
       </div>
 
-      <div style={styles.bar}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={mode === 'TEXT' ? "Type to write on page..." : "Doodle directly with mouse/touch!"}
-          style={styles.input}
-          disabled={mode === 'PEN'} 
-        />
-        
-        {/* VOICE TO TEXT TOGGLE */}
-        <button 
-          onClick={toggleVoice} 
-          style={{
-             ...styles.iconActionBtn, 
-             background: isListening ? '#ffe0e0' : 'transparent',
-             color: isListening ? '#e74c3c' : '#aaa'
-          }} 
-          disabled={mode === 'PEN'}
-          title="Voice Typing"
-        >
-          <Mic size={20} className={isListening ? 'pulse' : ''} />
-        </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
 
-        <button onClick={send} style={styles.btn} disabled={mode === 'PEN'}>
-          <Send size={20} />
-        </button>
-      </div>
+      <Dock 
+        items={[
+          { icon: <Home size={24} color="#fff" />, label: 'Home', onClick: () => window.location.href = '/' },
+          { icon: <ImagePlus size={24} color="#a78bfa" />, label: 'Insert Image', onClick: () => fileInputRef.current?.click() },
+          { icon: <Mic size={24} color={isListening ? '#e74c3c' : '#fff'} className={isListening ? 'pulse' : ''} />, label: 'Voice Dictation', onClick: toggleVoice },
+          { icon: <Settings size={24} color="#fff" />, label: 'Settings', onClick: () => alert('Settings!') },
+        ]}
+        panelHeight={68}
+        baseItemSize={50}
+        magnification={70}
+      />
     </div>
   );
 }
