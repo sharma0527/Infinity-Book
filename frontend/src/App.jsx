@@ -7,7 +7,7 @@ import SaveMenu from "./components/SaveMenu";
 import FlowingMenu from "./components/FlowingMenu";
 import HomePage from "./components/HomePage";
 import AIAssistant from "./components/AIAssistant";
-import { ChevronLeft, ChevronRight, Home, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon } from "lucide-react";
 import { io } from "socket.io-client";
 
 // Extract the base socket URL dynamically from saved settings or default
@@ -23,7 +23,7 @@ const getSocketUrl = () => {
   }
   return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
     ? "http://localhost:5000" 
-    : "/";
+    : "https://infinity-book-backend.onrender.com";
 };
 
 const socket = io(getSocketUrl(), { 
@@ -55,6 +55,14 @@ export default function App() {
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   const [orbPos, setOrbPos] = useState(null);
   const orbRef = React.useRef(null);
@@ -127,7 +135,7 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('access') === 'view') {
+    if (params.get('access') === 'view' || params.get('access') === 'comment') {
       setIsViewOnly(true);
     }
     
@@ -277,202 +285,373 @@ export default function App() {
         }} />
       ) : (
         <div style={styles.appWrapper}>
-          {/* SIDEBAR NAVIGATION using FlowingMenu */}
-      <div style={styles.sidebarWrap}>
-        <div style={styles.sidebarHeader}>
-          <button onClick={() => window.location.href = '/'} style={styles.homeBtn} title="Return to Home Page">
-            <Home size={20} color="#fff" />
-            <span style={styles.homeText}>HOME</span>
-          </button>
-          <button 
-            onClick={() => window.location.href = '/chatbot.ai/index.html'} 
-            style={{ ...styles.homeBtn, background: 'linear-gradient(135deg,#5ea2ff,#ff5fa2)', border: 'none', justifyContent: 'center' }} 
-            title="Open Infinity GPT"
-          >
-            <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', lineHeight: '20px' }}>∞</span>
-            <span style={styles.homeText}>INFINITY INTELLIGENCE</span>
-          </button>
-        </div>
-        <div style={styles.menuContainer}>
-          <FlowingMenu
-            items={menuItems}
-            onItemClick={(idx) => setCurrent(idx)}
-            speed={15}
-            textColor="#ffffff"
-            bgColor="#1a1a1d"
-            marqueeBgColor="#4a90e2"
-            marqueeTextColor="#ffffff"
-            borderColor="#333333"
-          />
-        </div>
-      </div>
-
-      {/* MAIN CONTENT AREA */}
-      <div style={styles.mainContentWrap}>
-        <SaveMenu pages={pages} current={current} />
-
-        {/* SHARE MENU */}
-        <ShareMenu />
-
-        {/* 3D BOOK VISUAL */}
-        <FixedBook />
-
-        {/* EDITABLE/DRAWABLE LAYER */}
-        <HybridPage
-          html={pages[current].html}
-          setHtml={updatePageHtml}
-          strokes={pages[current].strokes}
-          setStrokes={updatePageStrokes}
-          mode={mode}
-          activeTool={activeTool}
-          activeColor={activeColor}
-          activeFont={activeFont}
-          isViewOnly={isViewOnly}
-        />
-
-        {/* CHAT INPUT AND MODE TOGGLE (Hidden in View Mode) */}
-        {!isViewOnly && (
-          <ChatBar 
-            addText={addText}
-            addImage={addImage}
-            mode={mode} 
-            setMode={setMode} 
-            activeTool={activeTool}
-            setActiveTool={setActiveTool}
-            activeColor={activeColor}
-            setActiveColor={setActiveColor}
-            activeFont={activeFont}
-            setActiveFont={setActiveFont}
-          />
-        )}
-
-        {/* NAVIGATION (Unlimited Pages Support) */}
-        <div style={styles.navContainer}>
-          <div style={styles.pageIndicatorWrapper}>
-            <span style={styles.pageText}>Page</span>
-            <input
-              type="text"
-              value={jumpPage !== "" ? jumpPage : (current + 1)}
-              onFocus={() => setJumpPage((current + 1).toString())}
-              onBlur={() => {
-                const parsed = parseInt(jumpPage, 10);
-                if (!isNaN(parsed) && parsed > 0 && parsed <= pages.length) {
-                  setCurrent(parsed - 1);
-                }
-                setJumpPage("");
+          {/* Dynamic Sidebar Overlay on Mobile */}
+          {isMobile && sidebarOpen && (
+            <div 
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(0,0,0,0.65)',
+                backdropFilter: 'blur(5px)',
+                zIndex: 490,
+                animation: 'shareFadeIn 0.25s ease'
               }}
-              onChange={(e) => setJumpPage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.target.blur();
-                }
-              }}
-              style={styles.pageInput}
-              title="Type number and press Enter to jump"
             />
-            <span style={styles.pageText}>of {pages.length}</span>
-          </div>
-          <button
-            onClick={prevPage}
-            style={{ ...styles.navBtn, opacity: current === 0 ? 0.3 : 1 }}
-            disabled={current === 0}
-          >
-            <ChevronLeft size={36} color="white" />
-          </button>
-          <button onClick={nextPage} style={styles.navBtn}>
-            <ChevronRight size={36} color="white" />
-          </button>
-        </div>
-      </div>
+          )}
 
-      {/* AI VOICE ORB & PANEL TRIGGER */}
-      <button 
-        ref={orbRef}
-        onPointerDown={handleOrbPointerDown}
-        onClick={handleOrbClick}
-        style={{
-          position: 'absolute',
-          ...(orbPos 
-            ? { left: orbPos.x + 'px', top: orbPos.y + 'px', right: 'auto', bottom: 'auto' } 
-            : { bottom: '40px', right: '40px' }),
-          height: '50px',
-          padding: '0 24px',
-          borderRadius: '25px',
-          background: 'linear-gradient(135deg, rgba(115,165,255,0.8), rgba(255,95,162,0.8))',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          boxShadow: '0 8px 30px rgba(255, 95, 162, 0.3), inset 0 0 10px rgba(255,255,255,0.2)',
-          cursor: dragState.current?.isDragging ? 'grabbing' : 'pointer',
-          zIndex: 100,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          color: '#fff',
-          fontWeight: 'bold',
-          fontSize: '15px',
-          transition: dragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          transform: aiPanelOpen ? 'scale(0)' : 'scale(1)',
-          pointerEvents: aiPanelOpen ? 'none' : 'auto',
-          touchAction: 'none' // Prevent scrolling while dragging on touch devices
-        }}
-        title="Ask Infinity Intelligence"
-      >
-        <Sparkles color="#fff" size={20} />
-        Ask Infinity Intelligence
-      </button>
-
-      {/* AI DRAGGABLE FLOATING PANEL */}
-      {aiPanelOpen && (
-        <div 
-          ref={panelRef}
-          style={{
-            position: 'absolute',
-            top: panelPos ? panelPos.y + 'px' : Math.max(10, (orbPos ? orbPos.y : window.innerHeight - 40) - 620) + 'px',
-            left: panelPos ? panelPos.x + 'px' : Math.max(10, (orbPos ? orbPos.x : window.innerWidth - 40) - 440) + 'px',
-            width: '420px',
-            height: '600px',
-            background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '16px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-            zIndex: 110,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            transition: panelDragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-          }}>
-          <div 
-            onPointerDown={handlePanelPointerDown}
-            style={{ 
-              padding: '15px 20px', 
-              borderBottom: '1px solid rgba(255,255,255,0.1)', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              cursor: 'grab',
-              background: 'rgba(255,255,255,0.02)',
-              touchAction: 'none'
-            }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', pointerEvents: 'none' }}>
-              <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#10a37f' }}>∞</span>
-              <span style={{ color: '#fff', fontWeight: 'bold', letterSpacing: '1px', fontSize: '14px' }}>INFINITY INTELLIGENCE</span>
-            </div>
-            <button 
-              onClick={() => setAiPanelOpen(false)}
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '20px', padding: '5px' }}
+          {/* Floating Mobile Sidebar Trigger Menu Button */}
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                left: '15px',
+                zIndex: 150,
+                background: 'rgba(18, 18, 29, 0.8)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                borderRadius: '50%',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+                transition: 'all 0.2s'
+              }}
+              title="Open Navigation Menu"
             >
-              ✕
+              <Menu size={20} />
             </button>
+          )}
+
+          {/* SIDEBAR NAVIGATION using FlowingMenu */}
+          <div style={isMobile ? {
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: "280px",
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
+            zIndex: 500,
+            background: "#120F17",
+            borderRight: "1px solid rgba(255,255,255,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            boxShadow: sidebarOpen ? "0 0 35px rgba(0,0,0,0.8)" : "none"
+          } : styles.sidebarWrap}>
+            <div style={styles.sidebarHeader}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button onClick={() => window.location.href = '/'} style={{ ...styles.homeBtn, flex: 1 }} title="Return to Home Page">
+                  <Home size={20} color="#fff" />
+                  <span style={styles.homeText}>HOME</span>
+                </button>
+                {isMobile && (
+                  <button 
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginLeft: '10px'
+                    }}
+                  >
+                    <XIcon size={16} />
+                  </button>
+                )}
+              </div>
+              <button 
+                onClick={() => window.location.href = '/chatbot.ai/index.html'} 
+                style={{ ...styles.homeBtn, background: 'linear-gradient(135deg,#5ea2ff,#ff5fa2)', border: 'none', justifyContent: 'center' }} 
+                title="Open Infinity GPT"
+              >
+                <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', lineHeight: '20px' }}>∞</span>
+                <span style={styles.homeText}>INFINITY INTELLIGENCE</span>
+              </button>
+            </div>
+            <div style={styles.menuContainer}>
+              <FlowingMenu
+                items={menuItems}
+                onItemClick={(idx) => {
+                  setCurrent(idx);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                speed={15}
+                textColor="#ffffff"
+                bgColor="#1a1a1d"
+                marqueeBgColor="#4a90e2"
+                marqueeTextColor="#ffffff"
+                borderColor="#333333"
+              />
+            </div>
           </div>
-          <iframe 
-            src="/chatbot.ai/index.html" 
-            style={{ width: '100%', height: '100%', border: 'none', pointerEvents: panelDragState.current?.isDragging ? 'none' : 'auto' }}
-            title="Infinity Intelligence Chat"
-          ></iframe>
+
+          {/* MAIN CONTENT AREA */}
+          <div style={styles.mainContentWrap}>
+            <SaveMenu pages={pages} current={current} />
+
+            {/* SHARE MENU */}
+            <ShareMenu />
+
+            {/* 3D BOOK VISUAL (Auto-hides on mobile) */}
+            <FixedBook />
+
+            {/* EDITABLE/DRAWABLE LAYER */}
+            <HybridPage
+              html={pages[current].html}
+              setHtml={updatePageHtml}
+              strokes={pages[current].strokes}
+              setStrokes={updatePageStrokes}
+              mode={mode}
+              activeTool={activeTool}
+              activeColor={activeColor}
+              activeFont={activeFont}
+              isViewOnly={isViewOnly}
+            />
+
+            {/* CHAT INPUT AND MODE TOGGLE (Hidden in View Mode) */}
+            {!isViewOnly && (
+              <ChatBar 
+                addText={addText}
+                addImage={addImage}
+                mode={mode} 
+                setMode={setMode} 
+                activeTool={activeTool}
+                setActiveTool={setActiveTool}
+                activeColor={activeColor}
+                setActiveColor={setActiveColor}
+                activeFont={activeFont}
+                setActiveFont={setActiveFont}
+              />
+            )}
+
+            {/* NAVIGATION (Unlimited Pages Support) */}
+            <div style={isMobile ? {
+              position: "absolute",
+              bottom: "165px",
+              width: "100%",
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "0 16px",
+              boxSizing: "border-box",
+              pointerEvents: "none",
+              zIndex: 90
+            } : styles.navContainer}>
+              <div style={isMobile ? {
+                position: "absolute",
+                top: "-35px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "rgba(0,0,0,0.65)",
+                padding: "4px 12px",
+                borderRadius: "20px",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                pointerEvents: "auto"
+              } : styles.pageIndicatorWrapper}>
+                <span style={styles.pageText}>Page</span>
+                <input
+                  type="text"
+                  value={jumpPage !== "" ? jumpPage : (current + 1)}
+                  onFocus={() => setJumpPage((current + 1).toString())}
+                  onBlur={() => {
+                    const parsed = parseInt(jumpPage, 10);
+                    if (!isNaN(parsed) && parsed > 0 && parsed <= pages.length) {
+                      setCurrent(parsed - 1);
+                    }
+                    setJumpPage("");
+                  }}
+                  onChange={(e) => setJumpPage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.target.blur();
+                    }
+                  }}
+                  style={styles.pageInput}
+                  title="Type number and press Enter to jump"
+                />
+                <span style={styles.pageText}>of {pages.length}</span>
+              </div>
+              <button
+                onClick={prevPage}
+                style={isMobile ? {
+                  background: "rgba(0,0,0,0.7)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  pointerEvents: "auto",
+                  transition: "all 0.2s",
+                  opacity: current === 0 ? 0.3 : 1
+                } : { ...styles.navBtn, opacity: current === 0 ? 0.3 : 1 }}
+                disabled={current === 0}
+              >
+                <ChevronLeft size={isMobile ? 24 : 36} color="white" />
+              </button>
+              <button 
+                onClick={nextPage} 
+                style={isMobile ? {
+                  background: "rgba(0,0,0,0.7)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "50%",
+                  width: "40px",
+                  height: "40px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  pointerEvents: "auto",
+                  transition: "all 0.2s"
+                } : styles.navBtn}
+              >
+                <ChevronRight size={isMobile ? 24 : 36} color="white" />
+              </button>
+            </div>
+          </div>
+
+          {/* AI VOICE ORB & PANEL TRIGGER */}
+          <button 
+            ref={orbRef}
+            onPointerDown={handleOrbPointerDown}
+            onClick={handleOrbClick}
+            style={isMobile ? {
+              position: 'absolute',
+              bottom: '225px',
+              right: '16px',
+              height: '40px',
+              padding: '0 14px',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, rgba(115,165,255,0.9), rgba(255,95,162,0.9))',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              boxShadow: '0 8px 30px rgba(255, 95, 162, 0.4)',
+              cursor: 'pointer',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: '12px',
+              transform: aiPanelOpen ? 'scale(0)' : 'scale(1)',
+              pointerEvents: aiPanelOpen ? 'none' : 'auto',
+            } : {
+              position: 'absolute',
+              ...(orbPos 
+                ? { left: orbPos.x + 'px', top: orbPos.y + 'px', right: 'auto', bottom: 'auto' } 
+                : { bottom: '40px', right: '40px' }),
+              height: '50px',
+              padding: '0 24px',
+              borderRadius: '25px',
+              background: 'linear-gradient(135deg, rgba(115,165,255,0.8), rgba(255,95,162,0.8))',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              boxShadow: '0 8px 30px rgba(255, 95, 162, 0.3), inset 0 0 10px rgba(255,255,255,0.2)',
+              cursor: dragState.current?.isDragging ? 'grabbing' : 'pointer',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: '15px',
+              transition: dragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              transform: aiPanelOpen ? 'scale(0)' : 'scale(1)',
+              pointerEvents: aiPanelOpen ? 'none' : 'auto',
+              touchAction: 'none'
+            }}
+            title="Ask Infinity Intelligence"
+          >
+            <Sparkles color="#fff" size={isMobile ? 16 : 20} />
+            Ask Infinity Intelligence
+          </button>
+
+          {/* AI DRAGGABLE FLOATING PANEL */}
+          {aiPanelOpen && (
+            <div 
+              ref={panelRef}
+              style={isMobile ? {
+                position: 'absolute',
+                top: '10px',
+                left: '10px',
+                right: '10px',
+                bottom: '10px',
+                background: 'rgba(15, 23, 42, 0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                zIndex: 510,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              } : {
+                position: 'absolute',
+                top: panelPos ? panelPos.y + 'px' : Math.max(10, (orbPos ? orbPos.y : window.innerHeight - 40) - 620) + 'px',
+                left: panelPos ? panelPos.x + 'px' : Math.max(10, (orbPos ? orbPos.x : window.innerWidth - 40) - 440) + 'px',
+                width: '420px',
+                height: '600px',
+                background: 'rgba(15, 23, 42, 0.85)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                zIndex: 110,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transition: panelDragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+              }}>
+              <div 
+                onPointerDown={isMobile ? null : handlePanelPointerDown}
+                style={{ 
+                  padding: '15px 20px', 
+                  borderBottom: '1px solid rgba(255,255,255,0.1)', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: isMobile ? 'default' : 'grab',
+                  background: 'rgba(255,255,255,0.02)',
+                  touchAction: 'none'
+                }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', pointerEvents: 'none' }}>
+                  <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#10a37f' }}>∞</span>
+                  <span style={{ color: '#fff', fontWeight: 'bold', letterSpacing: '1px', fontSize: '14px' }}>INFINITY INTELLIGENCE</span>
+                </div>
+                <button 
+                  onClick={() => setAiPanelOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '20px', padding: '5px' }}
+                >
+                  ✕
+                </button>
+              </div>
+              <iframe 
+                src="/chatbot.ai/index.html" 
+                style={{ width: '100%', height: '100%', border: 'none', pointerEvents: panelDragState.current?.isDragging ? 'none' : 'auto' }}
+                title="Infinity Intelligence Chat"
+              ></iframe>
+            </div>
+          )}
         </div>
-      )}
-    </div>
       )}
     </>
   );
