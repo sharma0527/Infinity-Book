@@ -64,6 +64,86 @@ io.on('connection', (socket) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/history', historyRoutes);
 
+// Streaming Chat Endpoint with Grok API Failover Pool
+app.post('/api/chat', async (req, res) => {
+  const { messages } = req.body;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: "Invalid messages array." });
+  }
+
+  const apiKeys = [
+    process.env.GROK_API_KEY_1,
+    process.env.GROK_API_KEY_2
+  ].filter(Boolean);
+
+  if (apiKeys.length === 0) {
+    return res.status(500).json({ error: "No Grok API keys configured on the server." });
+  }
+
+  let lastError = null;
+
+  for (let i = 0; i < apiKeys.length; i++) {
+    const apiKey = apiKeys[i];
+    try {
+      console.log(`[Grok Failover] Attempting streaming chat completion with key index ${i + 1}/${apiKeys.length}...`);
+      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'grok-2-1212',
+          messages: messages,
+          temperature: 0.7,
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`HTTP error ${response.status}: ${errorText}`);
+      }
+
+      // Configure SSE response headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body.getReader();
+      let done = false;
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          res.write(value);
+        }
+      }
+
+      res.end();
+      console.log(`[Grok Failover] Stream completed successfully with key index ${i + 1}.`);
+      return; // Success!
+
+    } catch (err) {
+      console.error(`[Grok Failover] Key index ${i + 1} failed:`, err.message);
+      lastError = err;
+      // If headers are already sent, we failed in the middle of streaming, so we must stop.
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: "Stream interrupted mid-transmission.", details: err.message })}\n\n`);
+        res.end();
+        return;
+      }
+    }
+  }
+
+  // If all keys failed before starting the response stream
+  return res.status(500).json({
+    error: "All configured Grok API keys failed to respond.",
+    details: lastError?.message
+  });
+});
+
 // Root Route
 app.get('/', (req, res) => {
     res.send('Infinity AI Backend Server is running successfully!');

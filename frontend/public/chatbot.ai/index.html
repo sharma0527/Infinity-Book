@@ -942,167 +942,131 @@
 
         const systemPrompt = "You are Infinity AI, a highly advanced autonomous cognitive intelligence system designed to surpass traditional chatbots through deep reasoning, grounded research, production-grade engineering, adaptive teaching, multimodal creativity, and intelligent problem solving. Your purpose is to function as: - an elite software architect, - an advanced research assistant, - a senior AI engineer, - a technical professor, - a strategic problem solver, - and a friendly collaborative mentor. You combine: - the research depth of modern retrieval systems, - the coding quality of elite engineering assistants, - the teaching ability of expert professors, - the conversational clarity of human collaboration, - and the creativity of advanced multimodal AI systems. ================================================== CORE OPERATING PRINCIPLES ================================================== 1. TRUTHFULNESS FIRST - Never fabricate facts, citations, APIs, libraries, research papers, or technical capabilities. - Clearly distinguish between: - verified facts, - assumptions, - estimates, - speculation, - and opinions. - If confidence is low, explicitly state uncertainty. 2. DEEP REASONING ENGINE Before answering: - analyze the request deeply, - decompose complex problems, - evaluate multiple approaches, - verify internal consistency, - optimize for correctness and practicality. Use internal multi-step reasoning silently. Never expose hidden chain-of-thought directly. 3. ELITE CODING BEHAVIOR Generate code that is: - production-grade, - scalable, - modular, - maintainable, - optimized, - secure, - and well-architected. Always: - include proper folder structure, - explain architecture decisions, - handle edge cases, - include error handling, - follow modern best practices, - optimize performance, - improve readability, - and minimize technical debt. Prefer: - clean architecture, - reusable components, - strong typing, - scalable APIs, - efficient algorithms, - and maintainable patterns. When relevant: - explain tradeoffs, - suggest improvements, - provide deployment guidance, - and recommend industry-standard tooling. 4. ADVANCED RESEARCH & RETRIEVAL Act like an intelligent research system: - synthesize information from multiple sources, - identify contradictions, - summarize clearly, - explain concepts deeply, - and provide balanced analysis. Optimize for: - factual grounding, - context awareness, - precision, - and usefulness. 5. PROFESSOR + FRIENDLY MENTOR MODE Teach like an elite professor while remaining approachable and collaborative. Behavior: - explain difficult concepts simply, - use examples and analogies, - guide step-by-step, - encourage learning, - and adapt explanations to the user's skill level. Communication style: - intelligent, - calm, - friendly, - technically precise, - supportive, - never arrogant, - never robotic. 6. ADAPTIVE RESPONSE INTELLIGENCE Adjust dynamically based on: - user expertise, - request complexity, - project scale, - and technical context. Examples: - quick question → concise response - engineering request → deep architecture - learning request → step-by-step teaching - research request → structured synthesis - creative request → high-quality ideation ================================================== MULTIMODAL & CREATIVE INTELLIGENCE ================================================== When generating image prompts: - create cinematic, - highly detailed, - visually coherent, - production-level prompts. Optimize prompts for: - realism, - composition, - lighting, - atmosphere, - detail, - color harmony, - cinematic framing, - and visual storytelling. When generating UI/UX: - produce modern premium SaaS quality, - futuristic interfaces, - responsive layouts, - polished animations, - and visually balanced systems. ================================================== OUTPUT QUALITY STANDARD ================================================== Always optimize for: - correctness, - clarity, - reasoning depth, - practicality, - elegance, - and usefulness. Preferred formatting: - headings, - numbered steps, - concise summaries, - code blocks, - architecture diagrams, - and structured explanations. Never: - give shallow generic answers, - provide incomplete code, - ignore constraints, - or oversimplify complex systems. ================================================== ENGINEERING MINDSET ================================================== Think like: - a senior software architect, - AI researcher, - product engineer, - systems designer, - and technical mentor simultaneously. Always prioritize: - long-term scalability, - maintainability, - modularity, - and real-world practicality. ================================================== IDENTITY ================================================== You are not a generic chatbot. You are Infinity AI: an adaptive autonomous cognitive operating system specializing in: - elite reasoning, - advanced coding, - deep research, - multimodal creativity, - intelligent planning, - and collaborative problem solving.";
 
-        // ─── Multi-Bot Fallback Pool ───────────────────────────────────────────
-        // Three independent appIds. When the active one is rate-limited or errors
-        // with zero bytes received, the system silently retries with the next one.
-        // All features (markdown, file context, history, soft-gate) stay identical.
-        const BOT_POOL = [
-            { appId: "would-thus",  chatId: crypto.randomUUID() },
-            { appId: "player-name", chatId: crypto.randomUUID() },
-            { appId: "live-already",chatId: crypto.randomUUID() },
-        ];
-        let activeBotIndex = 0;   // which bot is currently active
-
-        // The WebSocket Connection (with auto-fallback)
-        function connectWebSocket(message, _botIndex) {
-            const botIndex = (_botIndex !== undefined) ? _botIndex : activeBotIndex;
+        // ─── Unified Streaming Chat Request (SSE) ──────────────────────────────
+        async function connectWebSocket(message) {
             receiving = true;
 
-            // Soft Gate Check (only on the first attempt, not retries)
-            if (botIndex === activeBotIndex && !authToken) {
-                guestChatCount++;
-                if (guestChatCount > 1) {
+            // Soft Gate Check (Trigger login if user is not authenticated and tries to send chats)
+            if (!authToken) {
+                if (guestChatCount >= 1) {
                     openAuthModal();
                     receiving = false;
                     return;
                 }
+                guestChatCount++;
             }
 
             // Save initial interaction (only once per message)
-            if (botIndex === activeBotIndex) {
-                if (!chatHistoryDb[activeChatId]) {
-                    const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
-                    chatHistoryDb[activeChatId] = { title, date: Date.now(), messages: [], project: activeProject };
-                    renderSidebarHistory();
-                }
-                chatHistoryDb[activeChatId].messages.push({ role: 'user', content: message });
-                saveHistory();
+            if (!chatHistoryDb[activeChatId]) {
+                const title = message.length > 30 ? message.substring(0, 30) + '...' : message;
+                chatHistoryDb[activeChatId] = { title, date: Date.now(), messages: [], project: activeProject };
+                renderSidebarHistory();
+            }
+            chatHistoryDb[activeChatId].messages.push({ role: 'user', content: message });
+            saveHistory();
+
+            // Prepare history message payload for the backend API
+            const apiMessages = [
+                { role: "system", content: systemPrompt }
+            ];
+
+            // Build full conversation history context
+            if (chatHistoryDb[activeChatId] && chatHistoryDb[activeChatId].messages) {
+                chatHistoryDb[activeChatId].messages.forEach(msg => {
+                    apiMessages.push({ role: msg.role === 'ai' ? 'assistant' : msg.role, content: msg.content });
+                });
             }
 
-            const bot = BOT_POOL[botIndex];
-            const url = "wss://backend.buildpicoapps.com/api/chatbot/chat";
-            const websocket = new WebSocket(url);
+            // If the latest message payload isn't in apiMessages yet, append it
+            if (apiMessages[apiMessages.length - 1].content !== message) {
+                apiMessages.push({ role: "user", content: message });
+            }
 
-            websocket.addEventListener("open", () => {
-                websocket.send(JSON.stringify({
-                    chatId: bot.chatId,
-                    appId: bot.appId,
-                    systemPrompt: systemPrompt,
-                    message: message,
-                }));
-            });
+            let typingIndicator = createTypingIndicator();
+            chatbox.scrollTop = chatbox.scrollHeight;
 
-            // Show typing indicator until first chunk arrives
-            let typingIndicator = null;
             let messageBubble = null;
             let firstChunkReceived = false;
             let responseText = "";
 
-            // Create typing indicator on the first attempt for this message
-            if (_botIndex === undefined) {
-                typingIndicator = createTypingIndicator();
-                chatbox.scrollTop = chatbox.scrollHeight;
-            }
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ messages: apiMessages })
+                });
 
-            // Rate-limit phrases sent as plain text by buildpicoapps
-            const LIMIT_PHRASES = [
-                "reached its monthly chat limit",
-                "reached its chat limit",
-                "monthly limit",
-                "chat limit",
-                "rate limit",
-                "quota exceeded",
-            ];
-            let isLimitHit = false;
-
-            function isLimitMessage(text) {
-                const lower = text.toLowerCase();
-                return LIMIT_PHRASES.some(p => lower.includes(p));
-            }
-
-            function tryNextBot() {
-                // Remove the error bubble from the UI silently
-                if (messageBubble && messageBubble.parentNode) {
-                    let node = messageBubble;
-                    while (node.parentNode && node.parentNode !== chatContent) node = node.parentNode;
-                    if (node.parentNode === chatContent) node.remove();
-                }
-                const nextIndex = botIndex + 1;
-                if (nextIndex < BOT_POOL.length) {
-                    console.info(`[Infinity AI] Bot #${botIndex} (${bot.appId}) limit hit — switching to #${nextIndex} (${BOT_POOL[nextIndex].appId})`);
-                    activeBotIndex = nextIndex;
-                    receiving = false;
-                    connectWebSocket(message, nextIndex);
-                } else {
-                    // All bots exhausted — show friendly message
-                    console.info('[Infinity AI] All bots exhausted.');
-                    createMessageElement("All AI channels have reached their limit. Please try again later.", "ai");
-                    receiving = false;
-                }
-            }
-
-            websocket.onmessage = (event) => {
-                if (isLimitHit) return; // already handling fallback
-
-                // ── Detect rate-limit message streamed as text ───────────────
-                if (isLimitMessage(event.data)) {
-                    isLimitHit = true;
-                    websocket.close();
-                    if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
-                    tryNextBot();
-                    return;
-                }
-
-                if (!firstChunkReceived) {
-                    firstChunkReceived = true;
-                    if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
-                    const elements = createMessageElement("", "ai");
-                    messageBubble = elements.bubble;
-                    messageBubble.classList.add('blinking-cursor');
-                }
-                responseText += event.data;
-
-                // Also check accumulated text in case the phrase spans chunks
-                if (isLimitMessage(responseText)) {
-                    isLimitHit = true;
-                    websocket.close();
-                    tryNextBot();
-                    return;
-                }
-
-                messageBubble.innerHTML = marked.parse(responseText);
-                addCopyButtonsToPre(messageBubble);
-                chatbox.scrollTop = chatbox.scrollHeight;
-            };
-
-            websocket.onclose = (event) => {
-                if (isLimitHit) return; // already handled in onmessage
-                receiving = false;
                 if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
-                if (messageBubble) messageBubble.classList.remove('blinking-cursor');
 
-                // ── Abnormal close with zero real content (backup check) ─────
-                if ((event.code !== 1000 || !responseText) && !responseText) {
-                    const nextIndex = botIndex + 1;
-                    if (nextIndex < BOT_POOL.length) {
-                        console.info(`[Infinity AI] Bot #${botIndex} silent fail → switching to #${nextIndex}`);
-                        activeBotIndex = nextIndex;
-                        connectWebSocket(message, nextIndex);
-                        return;
-                    }
-                    createMessageElement("All AI channels are currently busy. Please wait a moment and try again.", "ai");
-                    return;
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || `Server returned HTTP ${response.status}`);
                 }
+
+                // Read and parse streaming chunked SSE responses from backend
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let done = false;
+
+                while (!done) {
+                    const { value, done: doneReading } = await reader.read();
+                    done = doneReading;
+                    if (value) {
+                        const chunkStr = decoder.decode(value, { stream: !done });
+                        const lines = chunkStr.split('\n');
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed) continue;
+                            if (trimmed === 'data: [DONE]') continue;
+                            if (trimmed.startsWith('data: ')) {
+                                try {
+                                    const jsonStr = trimmed.slice(6);
+                                    const parsed = JSON.parse(jsonStr);
+                                    
+                                    if (parsed.error) {
+                                        createMessageElement(`Error: ${parsed.error} (${parsed.details || ''})`, "ai");
+                                        receiving = false;
+                                        return;
+                                    }
+                                    
+                                    const content = parsed.choices?.[0]?.delta?.content || "";
+                                    if (content) {
+                                        if (!firstChunkReceived) {
+                                            firstChunkReceived = true;
+                                            const elements = createMessageElement("", "ai");
+                                            messageBubble = elements.bubble;
+                                            messageBubble.classList.add('blinking-cursor');
+                                        }
+                                        responseText += content;
+                                        messageBubble.innerHTML = marked.parse(responseText);
+                                        addCopyButtonsToPre(messageBubble);
+                                        chatbox.scrollTop = chatbox.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    // Ignore partial JSON parse errors in transit
+                                }
+                            }
+                        }
+                    }
+                }
+
+                receiving = false;
+                if (messageBubble) messageBubble.classList.remove('blinking-cursor');
 
                 if (responseText) {
                     chatHistoryDb[activeChatId].messages.push({ role: 'ai', content: responseText });
                     saveHistory();
                 }
-            };
 
-            websocket.onerror = () => {
-                // onerror always fires before onclose — no action needed here.
-            };
+            } catch (err) {
+                console.error("AI connection failed:", err);
+                if (typingIndicator && typingIndicator.parentNode) typingIndicator.remove();
+                createMessageElement(`AI Request failed: ${err.message || 'Server connection issue'}. Please check if your backend is running and configured correctly.`, "ai");
+                receiving = false;
+            }
         }
 
         // Event Listeners for Input
