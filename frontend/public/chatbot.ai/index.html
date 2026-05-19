@@ -694,10 +694,9 @@
         let activeProject = null;
 
         // Dynamic API URL definition with customizable user settings
-        let API_URL = localStorage.getItem('infinity_backend_url') || 
-            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                ? 'http://localhost:5000/api' 
-                : 'https://infinity-book-backend.onrender.com/api');
+        let API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:5000/api'
+            : (localStorage.getItem('infinity_backend_url') || 'https://infinity-book-backend.onrender.com/api');
         
         let guestChatCount = 0;
 

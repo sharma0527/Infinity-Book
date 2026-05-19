@@ -12,6 +12,9 @@ import { io } from "socket.io-client";
 
 // Extract the base socket URL dynamically from saved settings or default
 const getSocketUrl = () => {
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return "http://localhost:5000";
+  }
   const savedBackend = localStorage.getItem('infinity_backend_url');
   if (savedBackend) {
     try {
@@ -21,9 +24,7 @@ const getSocketUrl = () => {
       // ignore
     }
   }
-  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
-    ? "http://localhost:5000" 
-    : "https://infinity-book-backend.onrender.com";
+  return "https://infinity-book-backend.onrender.com";
 };
 
 const socket = io(getSocketUrl(), { 
