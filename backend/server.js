@@ -21,5 +21,10 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
 app.use('/api/auth', authRoutes);
 app.use('/api/history', historyRoutes);
 
+// Root Route
+app.get('/', (req, res) => {
+    res.send('Infinity AI Backend Server is running successfully!');
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Backend server running on port ${PORT}`));

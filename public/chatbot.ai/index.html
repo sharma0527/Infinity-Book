@@ -450,9 +450,15 @@
             <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-500 text-xs p-3 rounded-lg mb-4 text-center"></div>
 
             <input type="text" id="auth-name" placeholder="Full Name" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent mb-3" />
-            <div class="relative mb-5">
+            <div class="relative mb-3">
                 <input type="email" id="auth-email" placeholder="Gmail Address" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent pr-24" />
                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-medium">@gmail.com</span>
+            </div>
+            
+            <!-- Custom Backend API URL Field -->
+            <div class="mb-5 text-left">
+                <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Render Backend API URL</label>
+                <input type="text" id="auth-backend-url" placeholder="https://your-backend.onrender.com/api" class="w-full bg-main border border-border rounded-lg p-3 text-xs text-white outline-none focus:border-accent" />
             </div>
 
             <button id="auth-submit-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors mb-3">
@@ -487,6 +493,10 @@
                                 <h3 id="pc-name">User</h3>
                                 <p id="pc-title">Infinity AI Member</p>
                             </div>
+                        </div>
+                        <div class="pc-content w-full px-8 mb-2" style="transform:translate3d(0,0,.1px); pointer-events: auto !important;">
+                            <label class="text-[10px] text-textSecondary block mb-1 text-left uppercase tracking-wider font-semibold">Backend API URL</label>
+                            <input type="text" id="pc-backend-url" class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accent text-center" onchange="updateBackendUrlFromProfile(this.value)" />
                         </div>
                         <div class="pc-user-info">
                             <div class="pc-user-details">
@@ -540,7 +550,12 @@
         let projectsDb = JSON.parse(localStorage.getItem('infinity_projects')) || [];
         let activeProject = null;
 
-        const API_URL = 'http://localhost:5000/api';
+        // Dynamic API URL definition with customizable user settings
+        let API_URL = localStorage.getItem('infinity_backend_url') || 
+            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? 'http://localhost:5000/api' 
+                : 'https://infinity-book-backend.onrender.com/api');
+        
         let guestChatCount = 0;
 
         // Startup logic
@@ -589,6 +604,10 @@
             document.getElementById('auth-error').classList.add('hidden');
             document.getElementById('auth-name').value = '';
             document.getElementById('auth-email').value = '';
+            document.getElementById('auth-backend-url').value = localStorage.getItem('infinity_backend_url') || 
+                (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? 'http://localhost:5000/api' 
+                    : 'https://infinity-book-backend.onrender.com/api');
         };
 
         // Profile Card Modal
@@ -624,10 +643,19 @@
 
             document.getElementById('pc-name').textContent = displayName;
             document.getElementById('pc-handle').textContent = handle;
+            document.getElementById('pc-backend-url').value = API_URL;
 
             modal.classList.remove('hidden');
             initProfileCardTilt();
             lucide.createIcons({ root: document.getElementById('pc-avatar') });
+        };
+
+        window.updateBackendUrlFromProfile = (url) => {
+            if (url && url.trim()) {
+                const trimmed = url.trim();
+                API_URL = trimmed;
+                localStorage.setItem('infinity_backend_url', trimmed);
+            }
         };
 
         // Profile pic upload handler
@@ -692,6 +720,7 @@
         document.getElementById('auth-submit-btn').addEventListener('click', async () => {
             const name  = document.getElementById('auth-name').value.trim();
             const email = document.getElementById('auth-email').value.trim();
+            const backendUrl = document.getElementById('auth-backend-url').value.trim();
             const errorDiv = document.getElementById('auth-error');
 
             if (!name || name.length < 2) {
@@ -701,6 +730,11 @@
             if (!email) {
                 errorDiv.innerText = 'Please enter your Gmail address.';
                 errorDiv.classList.remove('hidden'); return;
+            }
+
+            if (backendUrl) {
+                API_URL = backendUrl;
+                localStorage.setItem('infinity_backend_url', backendUrl);
             }
 
             // Auto-append @gmail.com if user only typed username
