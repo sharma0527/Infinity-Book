@@ -208,6 +208,12 @@
         .pc-card:hover,.pc-card.active{transition:none;transform:translateZ(0) rotateX(var(--pc-rotate-y)) rotateY(var(--pc-rotate-x))}
         .pc-card-shell.entering .pc-card{transition:transform 180ms ease-out}
         .pc-card .pc-inside > * { pointer-events: none; }
+        .pc-card .pc-inside .pc-user-info, 
+        .pc-card .pc-inside .pc-user-info *, 
+        .pc-card .pc-inside .pc-content,
+        .pc-card .pc-inside .pc-content * { 
+            pointer-events: auto !important; 
+        }
         .pc-inside { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2rem 0; }
         .pc-inside{inset:0;position:absolute;background-image:var(--pc-inner-gradient);background-color:rgba(0,0,0,.85)}
         .pc-shine{mask-image:none;mix-blend-mode:color-dodge;z-index:3;overflow:hidden;
@@ -593,7 +599,7 @@
             </div>
             
             <!-- Custom Backend API URL Field -->
-            <div class="mb-5 text-left">
+            <div class="mb-5 text-left hidden">
                 <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Render Backend API URL</label>
                 <input type="text" id="auth-backend-url" placeholder="https://your-backend.onrender.com/api" class="w-full bg-main border border-border rounded-lg p-3 text-xs text-white outline-none focus:border-accent" />
             </div>
