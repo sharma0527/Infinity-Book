@@ -55,6 +55,23 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('join_chat', (chatId) => {
+    socket.join(chatId);
+    socket.chatId = chatId;
+    console.log(`Client ${socket.id} entered collaborative AI Chat ${chatId}`);
+    
+    if (roomData.has(chatId)) {
+      socket.emit('init_chat_sync', roomData.get(chatId));
+    }
+  });
+
+  socket.on('update_chat', ({ chatId, messages }) => {
+    if (chatId) {
+      roomData.set(chatId, messages);
+      socket.to(chatId).emit('sync_chat', messages);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log('Client disconnected from stream:', socket.id);
   });

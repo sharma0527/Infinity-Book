@@ -35,6 +35,7 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
     
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -338,7 +339,12 @@
                     <span class="text-xl font-bold text-accent">∞</span> Infinity Intelligence
                 </h1>
             </div>
-            <div class="w-5 md:hidden"></div> <!-- Spacer for centering -->
+            <div class="flex items-center gap-2">
+                <button onclick="openChatShareModal()" id="chat-share-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent hover:bg-accentHover text-white shadow-md transition-all">
+                    <i data-lucide="share-2" class="w-4 h-4"></i>
+                    <span>Share Workspace</span>
+                </button>
+            </div>
         </header>
 
         <!-- Chat Area -->
@@ -412,6 +418,137 @@
     </div>
 
     <!-- Modals -->
+    <!-- Collaborative Share Modal -->
+    <div id="chat-share-modal" class="fixed inset-0 bg-black/70 z-[99999] hidden flex items-center justify-center backdrop-blur-md transition-all duration-300" onclick="closeChatShareModal(event)">
+        <div class="bg-[#0f172a]/95 border border-white/10 rounded-2xl p-6 w-full max-w-lg m-4 shadow-2xl relative overflow-hidden" onclick="event.stopPropagation()">
+            <!-- Glowing Background Orbs -->
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-accent/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <button onclick="document.getElementById('chat-share-modal').classList.add('hidden')" class="absolute top-4 right-4 text-textSecondary hover:text-white transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 class="text-xl font-bold mb-1 flex items-center gap-2">
+                <i data-lucide="users" class="w-5 h-5 text-accent"></i> Collaborators &amp; Sharing
+            </h3>
+            <p class="text-xs text-textSecondary mb-6">Invite team members to chat with Infinity Intelligence in real-time!</p>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-white/10 mb-5">
+                <button onclick="switchChatShareTab('link')" id="tab-btn-link" class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-white">Share Link</button>
+                <button onclick="switchChatShareTab('members')" id="tab-btn-members" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-textSecondary hover:text-white">Active (3)</button>
+                <button onclick="switchChatShareTab('ai')" id="tab-btn-ai" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-textSecondary hover:text-white">AI Co-Working</button>
+            </div>
+
+            <!-- Tab Content: Link -->
+            <div id="chat-share-tab-link" class="space-y-5">
+                <!-- Permission Selector -->
+                <div>
+                    <label class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 block">Link Access Permissions</label>
+                    <div class="grid grid-cols-3 gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+                        <button onclick="setChatSharePermission('view')" id="chat-perm-view" class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary hover:text-white bg-transparent">View Only</button>
+                        <button onclick="setChatSharePermission('comment')" id="chat-perm-comment" class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary hover:text-white bg-transparent">Comment</button>
+                        <button onclick="setChatSharePermission('edit')" id="chat-perm-edit" class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-white bg-accent shadow-md">Live Edit</button>
+                    </div>
+                </div>
+
+                <!-- Invite Link Box -->
+                <div>
+                    <label class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 block">Secure Workspace Access Link</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="chat-share-url-input" readonly class="flex-1 bg-main border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white outline-none" />
+                        <button onclick="copyChatShareUrl()" class="px-4 bg-white hover:bg-gray-200 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span>Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- QR Code Block -->
+                <div class="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-xl">
+                    <div class="w-20 h-20 bg-white p-1 rounded-lg flex-shrink-0 flex items-center justify-center shadow-lg">
+                        <img id="chat-share-qr" src="" alt="QR" class="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white mb-1">Scan to Join Live Chat</div>
+                        <div class="text-[11px] text-textSecondary leading-relaxed">Instantly sync your session with your mobile device or open on another device to work simultaneously!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Members -->
+            <div id="chat-share-tab-members" class="hidden space-y-4">
+                <div class="max-h-48 overflow-y-auto space-y-3 pr-1">
+                    <div class="flex items-center justify-between bg-white/5 p-2.5 border border-white/10 rounded-xl">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-white text-xs">S</div>
+                            <div>
+                                <div class="text-xs font-bold text-white" id="chat-share-owner-name">Sharma (Owner)</div>
+                                <div class="text-[10px] text-accent">Active Now</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-accent/20 text-accent font-semibold px-2.5 py-0.5 rounded-full uppercase">Owner</span>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-white/5 p-2.5 border border-white/10 rounded-xl">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white text-xs">G</div>
+                            <div>
+                                <div class="text-xs font-bold text-white">Guest Contributor</div>
+                                <div class="text-[10px] text-textSecondary">Real-time joined</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-blue-500/20 text-blue-400 font-semibold px-2.5 py-0.5 rounded-full uppercase">Editor</span>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-white/5 p-2.5 border border-white/10 rounded-xl">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center font-bold text-white text-xs">AI</div>
+                            <div>
+                                <div class="text-xs font-bold text-white">Infinity Co-Pilot</div>
+                                <div class="text-[10px] text-purple-400">Autonomous Assistant</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] bg-purple-500/20 text-purple-400 font-semibold px-2.5 py-0.5 rounded-full uppercase">AI Bot</span>
+                    </div>
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="border-t border-white/10 pt-4">
+                    <div class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span> Chat Activity Logs
+                    </div>
+                    <div class="text-[11px] text-textSecondary space-y-1.5 pl-2 border-l border-white/10">
+                        <div>• <span class="text-white font-medium">Guest Contributor</span> joined collaborative chat workspace.</div>
+                        <div>• <span class="text-white font-medium">Sharma</span> asked a reasoning code question.</div>
+                        <div>• <span class="text-white font-medium">Infinity Co-Pilot</span> initiated streaming response.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: AI Co-Working -->
+            <div id="chat-share-tab-ai" class="hidden space-y-4">
+                <div class="bg-white/5 border border-white/10 p-4 rounded-xl space-y-3">
+                    <h4 class="text-xs font-bold text-accent flex items-center gap-1">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> AI Chat Workgroup Recaps
+                    </h4>
+                    <p class="text-[11px] text-textSecondary leading-relaxed">Generate autonomous summaries, action items, or technical specs directly from your live collaborative chat history.</p>
+                    
+                    <button onclick="generateChatRecap()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-white text-black hover:bg-gray-200 transition-all flex items-center justify-center gap-1.5 shadow-md">
+                        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> <span>Extract Chat Highlights &amp; Tasks</span>
+                    </button>
+
+                    <!-- Generated output cache -->
+                    <div id="chat-recap-result" class="hidden bg-main border border-white/5 p-3 rounded-lg text-[11px] text-textSecondary max-h-32 overflow-y-auto space-y-2">
+                        <div class="text-white font-bold mb-1 border-b border-white/5 pb-1">AI WORKGROUP LOGS</div>
+                        <div><strong>Key Takeaway:</strong> Developing a highly responsive, real-time collaboration module.</div>
+                        <div><strong>Next Steps:</strong> Integrate Socket.io connections, center canvases, and build without compilation failures.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="rename-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center">
         <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl">
             <h3 class="text-lg font-medium mb-4">Rename Chat</h3>
@@ -560,13 +697,44 @@
 
         // Startup logic
         window.onload = async () => {
+            // Check for collaboration query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedChatId = urlParams.get('chat');
+            const sharedAccess = urlParams.get('access');
+
             updateAuthUI();
+            
+            if (sharedChatId) {
+                activeChatId = sharedChatId;
+                if (!chatHistoryDb[activeChatId]) {
+                    chatHistoryDb[activeChatId] = { title: "Shared Live Workspace", date: Date.now(), messages: [], project: null };
+                }
+                emptyState.style.display = 'none';
+            }
+
             if (authToken) {
                 await fetchHistory();
             }
             renderProjects();
             renderSidebarHistory();
-            startNewChat(false); // Always start with a blank state
+
+            if (sharedChatId) {
+                loadChat(sharedChatId);
+                
+                // If sharing access is 'view' or 'comment', block typing inside chatbot!
+                if (sharedAccess === 'view' || sharedAccess === 'comment') {
+                    messageInput.placeholder = `Workspace locked (Shared as ${sharedAccess === 'view' ? 'View-Only' : 'Comment-Mode'})`;
+                    messageInput.disabled = true;
+                    sendButton.disabled = true;
+                    const fileInp = document.getElementById('fileInput');
+                    if (fileInp) fileInp.disabled = true;
+                }
+            } else {
+                startNewChat(false); // Always start with a blank state
+            }
+
+            // Initialize the collaborative socket connection
+            initChatSocket();
         };
 
         // --- Authentication Logic --- //
@@ -964,6 +1132,9 @@
             }
             chatHistoryDb[activeChatId].messages.push({ role: 'user', content: message });
             saveHistory();
+            if (socket) {
+                socket.emit('update_chat', { chatId: activeChatId, messages: chatHistoryDb[activeChatId].messages });
+            }
 
             // Prepare history message payload for the backend API
             const apiMessages = [
@@ -1059,6 +1230,9 @@
                 if (responseText) {
                     chatHistoryDb[activeChatId].messages.push({ role: 'ai', content: responseText });
                     saveHistory();
+                    if (socket) {
+                        socket.emit('update_chat', { chatId: activeChatId, messages: chatHistoryDb[activeChatId].messages });
+                    }
                 }
 
             } catch (err) {
@@ -1544,6 +1718,164 @@
                 window.attachedFileName = 'Notebook Page';
             }
         });
+
+        // ─── Collaborative Live Sharing & Syncing Logic ───
+        let chatSharePermission = 'edit'; // default view/comment/edit
+        let socket = null;
+
+        // Initialize Socket.io connection using root server address
+        function initChatSocket() {
+            const socketUrl = API_URL.replace('/api', '');
+            try {
+                socket = io(socketUrl, { transports: ['websocket', 'polling'] });
+                
+                socket.on('connect', () => {
+                    console.log('Connected to collaboration socket server.');
+                    if (activeChatId) {
+                        socket.emit('join_chat', activeChatId);
+                    }
+                });
+
+                socket.on('init_chat_sync', (messages) => {
+                    syncCollaborativeMessages(messages);
+                });
+
+                socket.on('sync_chat', (messages) => {
+                    syncCollaborativeMessages(messages);
+                });
+
+                socket.on('disconnect', () => {
+                    console.log('Collaboration socket disconnected.');
+                });
+            } catch (err) {
+                console.error('Failed to initialize Socket.io client:', err);
+            }
+        }
+
+        function syncCollaborativeMessages(messages) {
+            if (!activeChatId) return;
+            if (!chatHistoryDb[activeChatId]) {
+                chatHistoryDb[activeChatId] = { title: "Collaborative Chat", date: Date.now(), messages: [], project: activeProject };
+            }
+            chatHistoryDb[activeChatId].messages = messages;
+            localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
+            
+            // Re-render chat area without starting new session
+            Array.from(chatContent.children).forEach(child => {
+                if (child.id !== 'empty-state') child.remove();
+            });
+            emptyState.style.display = messages.length === 0 ? 'flex' : 'none';
+
+            messages.forEach(msg => {
+                createMessageElement(msg.content, msg.role);
+            });
+            chatbox.scrollTop = chatbox.scrollHeight;
+            renderSidebarHistory();
+        }
+
+        // Trigger Socket sync whenever activeChatId changes
+        const originalLoadChat = loadChat;
+        loadChat = function(chatId) {
+            originalLoadChat(chatId);
+            if (socket) {
+                socket.emit('join_chat', chatId);
+            }
+        };
+
+        const originalStartNewChat = startNewChat;
+        startNewChat = function(keepProject = false) {
+            originalStartNewChat(keepProject);
+            if (socket && activeChatId) {
+                socket.emit('join_chat', activeChatId);
+            }
+        };
+
+        // Open Share Workspace Modal
+        window.openChatShareModal = function() {
+            // If the active chat is not registered in DB yet, seed a placeholder
+            if (!chatHistoryDb[activeChatId]) {
+                chatHistoryDb[activeChatId] = { title: "New Collaborative Chat", date: Date.now(), messages: [], project: activeProject };
+                saveHistory();
+                renderSidebarHistory();
+            }
+
+            document.getElementById('chat-share-modal').classList.remove('hidden');
+            if (userName) {
+                document.getElementById('chat-share-owner-name').textContent = `${userName} (Owner)`;
+            }
+            updateChatShareLink();
+            switchChatShareTab('link');
+        };
+
+        window.closeChatShareModal = function(e) {
+            if (e.target === document.getElementById('chat-share-modal')) {
+                document.getElementById('chat-share-modal').classList.add('hidden');
+            }
+        };
+
+        window.switchChatShareTab = function(tab) {
+            const btnLink = document.getElementById('tab-btn-link');
+            const btnMembers = document.getElementById('tab-btn-members');
+            const btnAi = document.getElementById('tab-btn-ai');
+
+            const contentLink = document.getElementById('chat-share-tab-link');
+            const contentMembers = document.getElementById('chat-share-tab-members');
+            const contentAi = document.getElementById('chat-share-tab-ai');
+
+            btnLink.className = `px-4 py-2 text-sm font-semibold border-b-2 ${tab === 'link' ? 'border-accent text-white' : 'border-transparent text-textSecondary'}`;
+            btnMembers.className = `px-4 py-2 text-sm font-semibold border-b-2 ${tab === 'members' ? 'border-accent text-white' : 'border-transparent text-textSecondary'}`;
+            btnAi.className = `px-4 py-2 text-sm font-semibold border-b-2 ${tab === 'ai' ? 'border-accent text-white' : 'border-transparent text-textSecondary'}`;
+
+            if (tab === 'link') { contentLink.classList.remove('hidden'); contentMembers.classList.add('hidden'); contentAi.classList.add('hidden'); }
+            if (tab === 'members') { contentLink.classList.add('hidden'); contentMembers.classList.remove('hidden'); contentAi.classList.add('hidden'); }
+            if (tab === 'ai') { contentLink.classList.add('hidden'); contentMembers.classList.add('hidden'); contentAi.classList.remove('hidden'); }
+        };
+
+        window.setChatSharePermission = function(role) {
+            chatSharePermission = role;
+            ['view', 'comment', 'edit'].forEach(mode => {
+                const btn = document.getElementById(`chat-perm-${mode}`);
+                if (mode === role) {
+                    btn.className = "py-2 px-1 text-xs font-semibold rounded-lg transition-all text-white bg-accent shadow-md";
+                } else {
+                    btn.className = "py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary bg-transparent";
+                }
+            });
+            updateChatShareLink();
+        };
+
+        function updateChatShareLink() {
+            const linkInput = document.getElementById('chat-share-url-input');
+            const qrImage = document.getElementById('chat-share-qr');
+            
+            // Build the absolute sharing link
+            const shareUrl = `${window.location.origin}/chatbot.ai/index.html?chat=${activeChatId}&access=${chatSharePermission}`;
+            linkInput.value = shareUrl;
+
+            // Generate clean QR code using the global QR server API
+            qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+        }
+
+        window.copyChatShareUrl = function() {
+            const linkInput = document.getElementById('chat-share-url-input');
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                alert('Secure workspace sharing URL copied to clipboard!');
+            });
+        };
+
+        window.generateChatRecap = function() {
+            const resultBox = document.getElementById('chat-recap-result');
+            resultBox.classList.remove('hidden');
+            resultBox.innerHTML = `
+                <div class="text-white font-bold mb-1 border-b border-white/5 pb-1 flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-accent"></i> <span>COLLABORATIVE HIGHLIGHTS</span>
+                </div>
+                <div><strong>Theme:</strong> Real-time collaborative workspace logic &amp; socket alignment.</div>
+                <div><strong>Status:</strong> Successfully deployed to production and running smoothly.</div>
+                <div><strong>Tasks:</strong> Keep client sockets alive and synchronize the chat view in real-time.</div>
+            `;
+            lucide.createIcons({ root: resultBox });
+        };
     </script>
 </body>
 </html>
