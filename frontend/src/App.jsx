@@ -10,8 +10,23 @@ import AIAssistant from "./components/AIAssistant";
 import { ChevronLeft, ChevronRight, Home, Sparkles } from "lucide-react";
 import { io } from "socket.io-client";
 
-// Global Socket definition allowing multi-tab caching dynamically against the deployment or local container
-const socket = io(window.location.hostname === "localhost" ? "http://localhost:3000" : "/", { 
+// Extract the base socket URL dynamically from saved settings or default
+const getSocketUrl = () => {
+  const savedBackend = localStorage.getItem('infinity_backend_url');
+  if (savedBackend) {
+    try {
+      const url = new URL(savedBackend);
+      return url.origin;
+    } catch (e) {
+      // ignore
+    }
+  }
+  return window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+    ? "http://localhost:5000" 
+    : "/";
+};
+
+const socket = io(getSocketUrl(), { 
   autoConnect: false 
 });
 
