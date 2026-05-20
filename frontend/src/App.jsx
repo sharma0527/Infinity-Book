@@ -10,13 +10,15 @@ import AIAssistant from "./components/AIAssistant";
 import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon } from "lucide-react";
 import { io } from "socket.io-client";
 
+import { API_URL } from "./config/api";
+
 // Expose the resolved API URL dynamically to the window object so the Chatbot iframe can read it
-const rawApiUrl = import.meta.env.VITE_API_URL || "https://infinity-book.onrender.com";
+const rawApiUrl = API_URL;
 window.VITE_API_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
 // Extract the base socket URL dynamically from saved settings or default
 const getSocketUrl = () => {
-  let envUrl = import.meta.env.VITE_API_URL;
+  let envUrl = API_URL;
   if (envUrl) {
     return envUrl.endsWith('/api') ? envUrl.slice(0, -4) : envUrl;
   }
@@ -33,7 +35,7 @@ const getSocketUrl = () => {
       // ignore
     }
   }
-  return "https://infinity-book.onrender.com";
+  return "https://infinity-book-1.onrender.com";
 };
 
 const socket = io(getSocketUrl(), { 

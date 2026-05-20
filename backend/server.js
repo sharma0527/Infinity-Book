@@ -170,5 +170,13 @@ app.get('/', (req, res) => {
     res.send('Infinity AI Backend Server is running successfully!');
 });
 
+// Test Route for deployment verification
+app.get('/test', (req, res) => {
+    res.json({
+        success: true,
+        message: "Backend working correctly"
+    });
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Backend server running on port ${PORT}`));
