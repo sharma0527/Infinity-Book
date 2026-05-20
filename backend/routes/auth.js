@@ -17,8 +17,10 @@ function isDisposable(email) {
 }
 
 function isGmail(email) {
-    const domain = email.split('@')[1];
-    return domain && domain.toLowerCase() === 'gmail.com';
+    if (!email) return false;
+    const parts = email.split('@');
+    if (parts.length !== 2) return false;
+    return parts[1].toLowerCase() === 'gmail.com';
 }
 
 /**
@@ -35,22 +37,24 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Gmail address is required.' });
         }
 
-        if (!isGmail(email)) {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        if (!isGmail(normalizedEmail)) {
             return res.status(400).json({ error: 'Only Gmail addresses (@gmail.com) are accepted.' });
         }
 
-        if (isDisposable(email)) {
+        if (isDisposable(normalizedEmail)) {
             return res.status(400).json({ error: 'Disposable email addresses are not allowed.' });
         }
 
         // Upsert: find existing user or create new one
-        let user = await User.findOne({ email });
+        let user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
             if (!name || name.trim().length < 2) {
                 return res.status(400).json({ error: 'Full name is required for new accounts.' });
             }
-            user = new User({ name: name.trim(), email, password: 'passwordless' });
+            user = new User({ name: name.trim(), email: normalizedEmail, password: 'passwordless' });
             await user.save();
         } else if (name && name.trim().length >= 2) {
             user.name = name.trim();
@@ -78,14 +82,17 @@ router.post('/signup', async (req, res) => {
         const { name, email } = req.body;
 
         if (!email) return res.status(400).json({ error: 'Gmail address is required.' });
-        if (!isGmail(email)) return res.status(400).json({ error: 'Only Gmail addresses (@gmail.com) are accepted.' });
-        if (isDisposable(email)) return res.status(400).json({ error: 'Disposable email addresses are not allowed.' });
 
-        let user = await User.findOne({ email });
+        const normalizedEmail = email.toLowerCase().trim();
+
+        if (!isGmail(normalizedEmail)) return res.status(400).json({ error: 'Only Gmail addresses (@gmail.com) are accepted.' });
+        if (isDisposable(normalizedEmail)) return res.status(400).json({ error: 'Disposable email addresses are not allowed.' });
+
+        let user = await User.findOne({ email: normalizedEmail });
 
         if (!user) {
             if (!name || name.trim().length < 2) return res.status(400).json({ error: 'Full name is required.' });
-            user = new User({ name: name.trim(), email, password: 'passwordless' });
+            user = new User({ name: name.trim(), email: normalizedEmail, password: 'passwordless' });
             await user.save();
         } else if (name && name.trim().length >= 2) {
             user.name = name.trim();

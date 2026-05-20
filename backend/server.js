@@ -9,7 +9,14 @@ const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://infinity-book.pages.dev',
+    'http://localhost:5173'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(express.json());
 
 const server = http.createServer(app);

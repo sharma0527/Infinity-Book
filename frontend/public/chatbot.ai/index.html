@@ -694,9 +694,19 @@
         let activeProject = null;
 
         // Dynamic API URL definition with customizable user settings
-        let API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-            ? 'http://localhost:5000/api'
-            : (localStorage.getItem('infinity_backend_url') || 'https://infinity-book-backend.onrender.com/api');
+        let parentApiUrl = null;
+        try {
+            if (window.parent && window.parent.VITE_API_URL) {
+                parentApiUrl = window.parent.VITE_API_URL;
+            }
+        } catch (e) {
+            // Ignore cross-origin error
+        }
+
+        let API_URL = parentApiUrl || 
+            ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? 'http://localhost:5000/api'
+                : (localStorage.getItem('infinity_backend_url') || 'https://infinity-book.onrender.com/api'));
         
         let guestChatCount = 0;
 
@@ -777,10 +787,21 @@
             document.getElementById('auth-error').classList.add('hidden');
             document.getElementById('auth-name').value = '';
             document.getElementById('auth-email').value = '';
+            
+            let parentApiUrl = null;
+            try {
+                if (window.parent && window.parent.VITE_API_URL) {
+                    parentApiUrl = window.parent.VITE_API_URL;
+                }
+            } catch (e) {
+                // Ignore
+            }
+            
             document.getElementById('auth-backend-url').value = localStorage.getItem('infinity_backend_url') || 
+                parentApiUrl ||
                 (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
                     ? 'http://localhost:5000/api' 
-                    : 'https://infinity-book-backend.onrender.com/api');
+                    : 'https://infinity-book.onrender.com/api');
         };
 
         // Profile Card Modal
@@ -905,13 +926,24 @@
                 errorDiv.classList.remove('hidden'); return;
             }
 
+            // Auto-append @gmail.com if user only typed username
+            let finalEmail = email;
+            if (!email.includes('@')) {
+                finalEmail = email + '@gmail.com';
+            } else {
+                // If it includes '@', it MUST have exactly one '@' and end with 'gmail.com' (case-insensitive)
+                const parts = email.split('@');
+                if (parts.length !== 2 || parts[1].toLowerCase() !== 'gmail.com') {
+                    errorDiv.innerText = 'Only original Gmail addresses (@gmail.com) are accepted.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+            }
+
             if (backendUrl) {
                 API_URL = backendUrl;
                 localStorage.setItem('infinity_backend_url', backendUrl);
             }
-
-            // Auto-append @gmail.com if user only typed username
-            const finalEmail = email.includes('@') ? email : email + '@gmail.com';
 
             try {
                 const response = await fetch(`${API_URL}/auth/login`, {
