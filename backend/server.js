@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
@@ -165,10 +166,8 @@ app.post('/api/chat', async (req, res) => {
   });
 });
 
-// Root Route
-app.get('/', (req, res) => {
-    res.send('Infinity AI Backend Server is running successfully!');
-});
+// Serve static files from the React frontend build
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Test Route for deployment verification
 app.get('/test', (req, res) => {
@@ -176,6 +175,11 @@ app.get('/test', (req, res) => {
         success: true,
         message: "Backend working correctly"
     });
+});
+
+// Fallback Route for Single Page Application
+app.get('*any', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
