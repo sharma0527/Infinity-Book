@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "build": "echo 'No build step required for this backend'"
+    "build": "cd ../frontend && npm install && npm run build"
   },
   "keywords": [],
   "author": "",
