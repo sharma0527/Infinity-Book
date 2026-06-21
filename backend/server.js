@@ -22,9 +22,9 @@ app.use(
     origin: function (origin, callback) {
       // allow requests with no origin (Postman, curl, mobile apps)
       if (!origin) return callback(null, true);
-      
+
       // Allow all origins for the dynamic Cloudflare Pages preview URLs to work seamlessly
-      return callback(null, true); 
+      return callback(null, true);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -50,21 +50,21 @@ const io = new Server(server, {
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI).then(() => {
-    console.log('✅ MongoDB Connected');
+  console.log('✅ MongoDB Connected');
 }).catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
+  console.error('❌ MongoDB connection error:', err);
 });
 
 mongoose.connection.on("connected", () => {
-    console.log("✅ MongoDB Reconnected");
+  console.log("✅ MongoDB Reconnected");
 });
 
 mongoose.connection.on("disconnected", () => {
-    console.log("⚠ MongoDB Disconnected");
+  console.log("⚠ MongoDB Disconnected");
 });
 
 mongoose.connection.on("error", (err) => {
-    console.log("❌ MongoDB Error:", err);
+  console.log("❌ MongoDB Error:", err);
 });
 
 // Cache memory for real-time document sync. 
@@ -89,7 +89,7 @@ io.on('connection', (socket) => {
     if (socket.roomId) {
       // Overwrite ephemeral document storage so late joiners don't miss data
       roomData.set(socket.roomId, latestPagesArray);
-      
+
       // Blast changes directly to all other collaborators in the room
       socket.to(socket.roomId).emit('sync_pages', latestPagesArray);
     }
@@ -99,7 +99,7 @@ io.on('connection', (socket) => {
     socket.join(chatId);
     socket.chatId = chatId;
     console.log(`Client ${socket.id} entered collaborative AI Chat ${chatId}`);
-    
+
     if (roomData.has(chatId)) {
       socket.emit('init_chat_sync', roomData.get(chatId));
     }
@@ -172,8 +172,6 @@ Infinity AI uses advanced artificial intelligence to help users learn, create, r
 What would you like to build or discuss next?`;
   } else {
     answer = `Hello! I am Infinity AI, your intelligent copilot. 
-
-*Note: I am currently running in a zero-key local fallback engine since no active Grok API keys are configured in the environment variables.*
 
 Even in backup mode, I am here to help you brainstorm and organize your book. You can:
 - **Write and sketch** collaboratively in real-time.
@@ -298,7 +296,7 @@ Always prioritize correctness, clarity, and usefulness.`;
       res.end();
       return;
     }
-    
+
     // If it fails before sending headers, fallback to mock response
     console.warn(`[OpenRouter] Request failed before streaming. Falling back to local mock response.`);
     return streamMockResponse(res, messages);
@@ -310,21 +308,21 @@ app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Test Route for deployment verification
 app.get('/test', (req, res) => {
-    res.json({
-        success: true,
-        message: "Backend working correctly"
-    });
+  res.json({
+    success: true,
+    message: "Backend working correctly"
+  });
 });
 
 // Fallback Route for Single Page Application
 app.get('*any', (req, res) => {
-    const indexPath = path.join(__dirname, '../frontend/dist/index.html');
-    require('fs').stat(indexPath, (err) => {
-        if (err) {
-            return res.status(200).send("Backend is running. API endpoints are available.");
-        }
-        res.sendFile(indexPath);
-    });
+  const indexPath = path.join(__dirname, '../frontend/dist/index.html');
+  require('fs').stat(indexPath, (err) => {
+    if (err) {
+      return res.status(200).send("Backend is running. API endpoints are available.");
+    }
+    res.sendFile(indexPath);
+  });
 });
 
 const PORT = process.env.PORT || 5000;
