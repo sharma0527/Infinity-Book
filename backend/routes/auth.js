@@ -47,6 +47,12 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Disposable email addresses are not allowed.' });
         }
 
+        // Check database connection explicitly
+        if (require('mongoose').connection.readyState !== 1) {
+            console.error('[Auth] Database is disconnected. Ensure MONGO_URI is set on Render.');
+            return res.status(500).json({ error: 'Database connection error. Please configure your MONGO_URI in the Render Dashboard.' });
+        }
+
         // Upsert: find existing user or create new one
         let user = await User.findOne({ email: normalizedEmail });
 
@@ -87,6 +93,12 @@ router.post('/signup', async (req, res) => {
 
         if (!isGmail(normalizedEmail)) return res.status(400).json({ error: 'Only Gmail addresses (@gmail.com) are accepted.' });
         if (isDisposable(normalizedEmail)) return res.status(400).json({ error: 'Disposable email addresses are not allowed.' });
+
+        // Check database connection explicitly
+        if (require('mongoose').connection.readyState !== 1) {
+            console.error('[Auth] Database is disconnected. Ensure MONGO_URI is set on Render.');
+            return res.status(500).json({ error: 'Database connection error. Please configure your MONGO_URI in the Render Dashboard.' });
+        }
 
         let user = await User.findOne({ email: normalizedEmail });
 
