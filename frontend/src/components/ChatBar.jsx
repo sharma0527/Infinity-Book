@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef as useRefCB } from "react";
-import { Send, Type, PenTool, Edit2, Highlighter, Mic, ImagePlus, Home, Settings } from 'lucide-react';
+import { Send, Type, PenTool, Edit2, Highlighter, Mic, ImagePlus, Home, Settings, GripHorizontal } from 'lucide-react';
 import Dock from './Dock';
+import { motion } from 'motion/react';
 
 const FONTS = [
   'Caveat', 'Dancing Script', 'Indie Flower', 
@@ -130,20 +131,35 @@ export default function ChatBar({
   if (activeTool === 'highlighter') colorsToShow = HIGHLIGHTER_COLORS;
 
   return (
-    <div style={{
-      position: "absolute",
-      bottom: isMobile ? "10px" : "20px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      gap: isMobile ? "6px" : "10px",
-      zIndex: 100,
-      width: isMobile ? "94vw" : "auto",
-      boxSizing: "border-box"
-    }}>
+    <motion.div 
+      drag
+      dragMomentum={false}
+      style={{
+        position: "absolute",
+        bottom: isMobile ? "10px" : "20px",
+        left: "50%",
+        x: "-50%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: isMobile ? "6px" : "10px",
+        zIndex: 100,
+        width: isMobile ? "94vw" : "auto",
+        boxSizing: "border-box",
+        cursor: "grab"
+      }}
+      whileTap={{ cursor: "grabbing" }}
+    >
       
+      {/* Optional: Add a little drag handle visual at the top */}
+      <div style={{
+        width: "40px",
+        height: "6px",
+        background: "rgba(0,0,0,0.2)",
+        borderRadius: "10px",
+        marginBottom: "-4px",
+        opacity: 0.5
+      }} />
       {showFontMenu && mode === 'TEXT' && (
         <div style={{
           background: "rgba(255, 255, 255, 0.98)",
@@ -378,6 +394,6 @@ export default function ChatBar({
           magnification={isMobile ? 56 : 70}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }
