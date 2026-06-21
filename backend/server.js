@@ -11,8 +11,8 @@ const historyRoutes = require('./routes/history');
 
 const app = express();
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: ['https://8e780c41.infinity-book.pages.dev', 'http://localhost:5173', 'http://localhost:3000', '*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
@@ -20,8 +20,8 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", 
-    methods: ["GET", "POST"]
+    origin: ['https://8e780c41.infinity-book.pages.dev', 'http://localhost:5173', 'http://localhost:3000', '*'],
+    methods: ["GET", "POST", "OPTIONS"]
   }
 });
 
@@ -240,7 +240,13 @@ app.get('/test', (req, res) => {
 
 // Fallback Route for Single Page Application
 app.get('*any', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    const indexPath = path.join(__dirname, '../frontend/dist/index.html');
+    require('fs').stat(indexPath, (err) => {
+        if (err) {
+            return res.status(200).send("Backend is running. API endpoints are available.");
+        }
+        res.sendFile(indexPath);
+    });
 });
 
 const PORT = process.env.PORT || 5000;
