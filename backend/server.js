@@ -227,24 +227,26 @@ Always prioritize correctness, clarity, and usefulness.`;
     messages = [{ role: 'system', content: systemPrompt }, ...messages];
   }
 
-  const apiKey = process.env.GROK_API_KEY;
-  console.log("Grok Active:", !!apiKey);
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  console.log("OpenRouter Active:", !!apiKey);
 
   if (!apiKey) {
-    console.warn(`[Grok] No API key configured in GROK_API_KEY. Streaming local mock fallback response.`);
+    console.warn(`[OpenRouter] No API key configured in OPENROUTER_API_KEY. Streaming local mock fallback response.`);
     return streamMockResponse(res, messages);
   }
 
   try {
-    console.log(`[Grok] Attempting streaming chat completion...`);
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    console.log(`[OpenRouter] Attempting streaming chat completion...`);
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://infinity-book.pages.dev',
+        'X-Title': 'Infinity Book'
       },
       body: JSON.stringify({
-        model: 'grok-2-1212',
+        model: 'meta-llama/llama-3.3-70b-instruct',
         messages: messages,
         temperature: 0.7,
         stream: true
@@ -273,11 +275,11 @@ Always prioritize correctness, clarity, and usefulness.`;
     }
 
     res.end();
-    console.log(`[Grok] Stream completed successfully.`);
+    console.log(`[OpenRouter] Stream completed successfully.`);
     return; // Success!
 
   } catch (err) {
-    console.error(`[Grok] Request failed:`, err.message);
+    console.error(`[OpenRouter] Request failed:`, err.message);
     // If headers are already sent, we failed in the middle of streaming, so we must stop.
     if (res.headersSent) {
       res.write(`data: ${JSON.stringify({ error: "Stream interrupted mid-transmission.", details: err.message })}\n\n`);
@@ -286,7 +288,7 @@ Always prioritize correctness, clarity, and usefulness.`;
     }
     
     // If it fails before sending headers, fallback to mock response
-    console.warn(`[Grok] Request failed before streaming. Falling back to local mock response.`);
+    console.warn(`[OpenRouter] Request failed before streaming. Falling back to local mock response.`);
     return streamMockResponse(res, messages);
   }
 });
