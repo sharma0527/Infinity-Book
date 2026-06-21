@@ -121,7 +121,7 @@ io.on('connection', (socket) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/history', historyRoutes);
 
-// Local Intelligent Fallback Engine when no Grok API keys are configured or all keys fail
+// Local Intelligent Fallback Engine when no OpenRouter API keys are configured or all keys fail
 function streamMockResponse(res, messages) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -131,7 +131,7 @@ function streamMockResponse(res, messages) {
   let answer = "";
 
   if (/draw|sketch|pencil|highlighter|pen/i.test(lastUserMsg)) {
-    answer = `I see you are interested in sketching or drawing! I am running in local backup mode (since the Grok API keys are not active), but I can guide you:
+    answer = `I see you are interested in sketching or drawing! I am running in local backup mode (since the AI connection is offline), but I can guide you:
 1. Click on the **Pen**, **Pencil**, or **Highlighter** tool in the bottom menu bar to sketch.
 2. Select your drawing color using the color circle picker.
 3. If you want to add text alongside your sketches, just type in the input bar and press Enter!`;
@@ -148,7 +148,7 @@ To collaborate with friends:
   } else if (/what is ai|about infinity/i.test(lastUserMsg)) {
     answer = `Hello! I am Infinity AI, your intelligent copilot.
 
-*Note: I am currently running in a zero-key local fallback engine since no active Grok API keys are configured in the environment variables.*
+*Note: I am currently running in a local fallback engine since the OpenRouter API connection is offline.*
 
 Even in backup mode, I am here to help you brainstorm and organize your book. You can:
 - Write and sketch collaboratively in real-time.
