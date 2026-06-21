@@ -10,11 +10,35 @@ const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
 
 const app = express();
-app.use(cors({
-  origin: ['https://8e780c41.infinity-book.pages.dev', 'http://localhost:5173', 'http://localhost:3000', '*'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+const allowedOrigins = [
+  "https://8e780c41.infinity-book.pages.dev",
+  "https://infinity-book.pages.dev",
+  "http://localhost:5173",
+  "http://localhost:3000"
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (Postman, curl, mobile apps)
+      if (!origin) return callback(null, true);
+      
+      // Allow all origins for the dynamic Cloudflare Pages preview URLs to work seamlessly
+      return callback(null, true); 
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization"
+    ]
+  })
+);
+
+app.options("*", cors());
 app.use(express.json());
 
 const server = http.createServer(app);
