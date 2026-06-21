@@ -227,76 +227,68 @@ Always prioritize correctness, clarity, and usefulness.`;
     messages = [{ role: 'system', content: systemPrompt }, ...messages];
   }
 
-  const apiKeys = [
-    process.env.GROK_API_KEY_1,
-    process.env.GROK_API_KEY_2
-  ].filter(Boolean);
+  const apiKey = process.env.GROK_API_KEY;
+  console.log("Grok Active:", !!apiKey);
 
-  if (apiKeys.length === 0) {
-    console.warn(`[Grok Failover] No API keys configured. Streaming local mock fallback response.`);
+  if (!apiKey) {
+    console.warn(`[Grok] No API key configured in GROK_API_KEY. Streaming local mock fallback response.`);
     return streamMockResponse(res, messages);
   }
 
-  let lastError = null;
+  try {
+    console.log(`[Grok] Attempting streaming chat completion...`);
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'grok-2-1212',
+        messages: messages,
+        temperature: 0.7,
+        stream: true
+      })
+    });
 
-  for (let i = 0; i < apiKeys.length; i++) {
-    const apiKey = apiKeys[i];
-    try {
-      console.log(`[Grok Failover] Attempting streaming chat completion with key index ${i + 1}/${apiKeys.length}...`);
-      const response = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'grok-2-1212',
-          messages: messages,
-          temperature: 0.7,
-          stream: true
-        })
-      });
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`HTTP error ${response.status}: ${errorText}`);
+    }
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(`HTTP error ${response.status}: ${errorText}`);
-      }
+    // Configure SSE response headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
 
-      // Configure SSE response headers
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
+    const reader = response.body.getReader();
+    let done = false;
 
-      const reader = response.body.getReader();
-      let done = false;
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          res.write(value);
-        }
-      }
-
-      res.end();
-      console.log(`[Grok Failover] Stream completed successfully with key index ${i + 1}.`);
-      return; // Success!
-
-    } catch (err) {
-      console.error(`[Grok Failover] Key index ${i + 1} failed:`, err.message);
-      lastError = err;
-      // If headers are already sent, we failed in the middle of streaming, so we must stop.
-      if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: "Stream interrupted mid-transmission.", details: err.message })}\n\n`);
-        res.end();
-        return;
+    while (!done) {
+      const { value, done: doneReading } = await reader.read();
+      done = doneReading;
+      if (value) {
+        res.write(value);
       }
     }
-  }
 
-  // If all keys failed before starting the response stream, stream local fallback instead of returning 500 error!
-  console.warn(`[Grok Failover] All configured keys failed. Streaming local mock fallback response.`);
-  return streamMockResponse(res, messages);
+    res.end();
+    console.log(`[Grok] Stream completed successfully.`);
+    return; // Success!
+
+  } catch (err) {
+    console.error(`[Grok] Request failed:`, err.message);
+    // If headers are already sent, we failed in the middle of streaming, so we must stop.
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ error: "Stream interrupted mid-transmission.", details: err.message })}\n\n`);
+      res.end();
+      return;
+    }
+    
+    // If it fails before sending headers, fallback to mock response
+    console.warn(`[Grok] Request failed before streaming. Falling back to local mock response.`);
+    return streamMockResponse(res, messages);
+  }
 });
 
 // Serve static files from the React frontend build
