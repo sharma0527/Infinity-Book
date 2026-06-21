@@ -133,6 +133,31 @@ To collaborate with friends:
     answer = `You can easily preserve your work! 
 1. Use the **Save Menu** in the upper part of the sidebar or workspace area.
 2. You can download your current page as an image or export the entire book as a JSON backup so you can load it back later on any machine.`;
+  } else if (/what is ai|about infinity/i.test(lastUserMsg)) {
+    answer = `Hello! I am Infinity AI, your intelligent copilot.
+
+*Note: I am currently running in a zero-key local fallback engine since no active Grok API keys are configured in the environment variables.*
+
+Even in backup mode, I am here to help you brainstorm and organize your book. You can:
+- Write and sketch collaboratively in real-time.
+- Manage multiple pages using the navigation arrows.
+- Export your work at any time.
+
+# What is Artificial Intelligence (AI)?
+Artificial Intelligence (AI) is a branch of computer science that enables machines to perform tasks that normally require human intelligence.
+AI systems can learn from data, recognize patterns, understand language, solve problems, make decisions, and generate content.
+
+Examples of AI include:
+• Virtual assistants and chatbots
+• Language translation systems
+• Recommendation engines
+• Image and speech recognition
+• Autonomous systems
+• AI-powered writing and coding assistants
+
+Infinity AI uses advanced artificial intelligence to help users learn, create, research, write, and solve problems more effectively.
+
+What would you like to build or discuss next?`;
   } else {
     answer = `Hello! I am Infinity AI, your intelligent copilot. 
 
@@ -173,9 +198,33 @@ What would you like to build or discuss next?`;
 
 // Streaming Chat Endpoint with Grok API Failover Pool and Local Mock Fallback
 app.post('/api/chat', async (req, res) => {
-  const { messages } = req.body;
+  let { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: "Invalid messages array." });
+  }
+
+  // Inject the required Infinity AI System Persona if not already present
+  const systemPrompt = `You are Infinity AI, an advanced AI assistant specialized in education, programming, research, productivity, writing, and problem solving.
+
+Provide accurate, detailed, well-structured answers.
+
+When explaining concepts:
+* Start with a simple explanation.
+* Then provide technical details.
+* Give examples whenever useful.
+
+For coding questions:
+* Provide complete working code.
+* Explain important parts.
+* Suggest best practices.
+
+For career and learning questions:
+* Give practical step-by-step guidance.
+
+Always prioritize correctness, clarity, and usefulness.`;
+
+  if (messages.length === 0 || messages[0].role !== 'system') {
+    messages = [{ role: 'system', content: systemPrompt }, ...messages];
   }
 
   const apiKeys = [

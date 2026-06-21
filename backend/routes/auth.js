@@ -61,7 +61,7 @@ router.post('/login', async (req, res) => {
             await user.save();
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'infinity_fallback_secret_key_2026', { expiresIn: '30d' });
 
         res.json({
             token,
@@ -99,7 +99,7 @@ router.post('/signup', async (req, res) => {
             await user.save();
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'infinity_fallback_secret_key_2026', { expiresIn: '30d' });
         res.status(201).json({ token, name: user.name, email: user.email, history: user.history || {}, projects: user.projects || [] });
     } catch (err) {
         console.error('[Auth] signup error:', err);
