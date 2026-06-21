@@ -50,9 +50,21 @@ const io = new Server(server, {
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI).then(() => {
-    console.log('Connected to MongoDB');
+    console.log('✅ MongoDB Connected');
 }).catch((err) => {
-    console.error('MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err);
+});
+
+mongoose.connection.on("connected", () => {
+    console.log("✅ MongoDB Reconnected");
+});
+
+mongoose.connection.on("disconnected", () => {
+    console.log("⚠ MongoDB Disconnected");
+});
+
+mongoose.connection.on("error", (err) => {
+    console.log("❌ MongoDB Error:", err);
 });
 
 // Cache memory for real-time document sync. 
