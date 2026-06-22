@@ -58,8 +58,21 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('infinity_token'));
   const [pages, setPages] = useState(getInitialPages);
   const [current, setCurrent] = useState(0);
-  const [view, setView] = useState(() => localStorage.getItem('infinity_token') ? 'notebook' : 'home');
+  const [view, setView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('doc') ? 'notebook' : 'home';
+  });
   const [collaborators, setCollaborators] = useState([]);
+
+  const handleOpenNotebook = () => {
+    const params = new URLSearchParams(window.location.search);
+    let docId = params.get('doc');
+    if (!docId) {
+      docId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      window.history.pushState({}, '', `/?doc=${docId}`);
+    }
+    setView('notebook');
+  };
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -68,6 +81,7 @@ export default function App() {
       const newDocId = Math.random().toString(36).substring(2, 10).toUpperCase();
       window.history.pushState({}, '', `/?doc=${newDocId}`);
     }
+    setView('notebook');
   };
 
   const handleLogout = () => {
@@ -350,7 +364,7 @@ export default function App() {
     }));
 
   if (view === 'home') {
-    return <HomePage onLogin={() => setView('notebook')} />;
+    return <HomePage onLogin={handleOpenNotebook} />;
   }
 
   return (

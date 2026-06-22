@@ -5,7 +5,19 @@ import LaserFlow from './LaserFlow';
 export default function HomePage({ onLogin }) {
   return (
     <div style={styles.container}>
-      <LaserFlow style={{ position: 'absolute', inset: 0, zIndex: 0 }} horizontalBeamOffset={0.0} color="#b575ff" />
+      <LaserFlow 
+        style={{ position: 'absolute', inset: 0, zIndex: 0 }} 
+        horizontalBeamOffset={0.0} 
+        color="#b575ff" 
+        horizontalSizing={1.2}
+        verticalSizing={3.2}
+        fogIntensity={0.85}
+        wispDensity={1.2}
+        wispIntensity={7.0}
+        flowStrength={0.4}
+        flowSpeed={0.45}
+        wispSpeed={15.0}
+      />
       <div style={styles.overlay}></div>
       
       <div style={styles.content}>
@@ -107,14 +119,17 @@ const styles = {
     width: '100vw',
     minHeight: '100vh',
     position: 'relative',
-    overflow: 'hidden',
+    overflowY: 'auto',
+    overflowX: 'hidden',
     background: '#030305',
     fontFamily: 'Inter, sans-serif',
     color: '#fff',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '40px 0',
+    padding: '24px 20px',
+    boxSizing: 'border-box',
   },
   overlay: {
     position: 'absolute',
@@ -142,7 +157,7 @@ const styles = {
     borderRadius: '999px',
     background: 'rgba(255,255,255,0.05)',
     border: '1px solid rgba(255,255,255,0.1)',
-    marginBottom: '32px',
+    marginBottom: '18px',
     backdropFilter: 'blur(10px)',
     fontSize: '12px',
     fontWeight: '600',
@@ -153,7 +168,7 @@ const styles = {
     fontSize: 'clamp(44px, 7vw, 72px)',
     fontWeight: '800',
     lineHeight: '1.1',
-    marginBottom: '24px',
+    marginBottom: '16px',
     letterSpacing: '-2.5px',
   },
   highlight: {
@@ -165,7 +180,7 @@ const styles = {
     fontSize: 'clamp(15px, 2.5vw, 18px)',
     lineHeight: '1.6',
     color: '#94a3b8',
-    marginBottom: '40px',
+    marginBottom: '24px',
     fontWeight: '400',
     maxWidth: '650px',
   },
@@ -192,7 +207,7 @@ const styles = {
     gap: '24px',
     width: '100%',
     maxWidth: '900px',
-    marginTop: '64px',
+    marginTop: '36px',
     flexWrap: 'wrap',
   },
   featureCard: {

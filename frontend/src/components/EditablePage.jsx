@@ -16,6 +16,58 @@ const CORNERS = [
   { id: 'br', cursor: 'nwse-resize', bottom: -6, right: -6, dx:  1, dy:  1 },
 ];
 
+// Helper to get caret character offset inside contenteditable
+function getCaretCharacterOffsetWithin(element) {
+  let caretOffset = 0;
+  const doc = element.ownerDocument || element.document;
+  const win = doc.defaultView || doc.parentWindow;
+  let sel;
+  if (typeof win.getSelection !== "undefined") {
+    sel = win.getSelection();
+    if (sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(element);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretOffset = preCaretRange.toString().length;
+    }
+  }
+  return caretOffset;
+}
+
+// Helper to restore caret character offset inside contenteditable
+function setCaretPosition(element, offset) {
+  let charIndex = 0;
+  const range = document.createRange();
+  range.setStart(element, 0);
+  range.collapse(true);
+  const nodeStack = [element];
+  let node;
+  let found = false;
+  
+  while (nodeStack.length > 0) {
+    node = nodeStack.pop();
+    if (node.nodeType === 3) {
+      const nextCharIndex = charIndex + node.length;
+      if (!found && offset >= charIndex && offset <= nextCharIndex) {
+        range.setStart(node, offset - charIndex);
+        range.collapse(true);
+        found = true;
+      }
+      charIndex = nextCharIndex;
+    } else {
+      let i = node.childNodes.length;
+      while (i--) {
+        nodeStack.push(node.childNodes[i]);
+      }
+    }
+  }
+  
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
 export default function EditablePage({ html, setHtml, isActiveMode, activeFont, activeTool, activeColor }) {
   const editorRef    = useRef(null);
   const containerRef = useRef(null);
@@ -31,7 +83,25 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
   // ─── Sync HTML into DOM ───────────────────────────────────────────────────
   useEffect(() => {
     const el = editorRef.current;
-    if (el && el.innerHTML !== html) el.innerHTML = html || "";
+    if (!el || el.innerHTML === html) return;
+
+    // Check if the current editor has focus
+    const hasFocus = document.activeElement === el;
+    let savedOffset = 0;
+
+    if (hasFocus) {
+      savedOffset = getCaretCharacterOffsetWithin(el);
+    }
+
+    el.innerHTML = html || "";
+
+    if (hasFocus) {
+      try {
+        setCaretPosition(el, savedOffset);
+      } catch (err) {
+        console.warn("Failed to restore caret position:", err);
+      }
+    }
   }, [html]);
 
   // ─── Text formatting ──────────────────────────────────────────────────────
