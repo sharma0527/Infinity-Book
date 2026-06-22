@@ -35,7 +35,7 @@
     
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <script src="./socket.io.min.js"></script>
     
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -592,22 +592,36 @@
 
             <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-500 text-xs p-3 rounded-lg mb-4 text-center"></div>
 
-            <input type="text" id="auth-name" placeholder="Full Name" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent mb-3" />
-            <div class="relative mb-3">
-                <input type="email" id="auth-email" placeholder="Gmail Address" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent pr-24" />
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-medium">@gmail.com</span>
-            </div>
-            
-            <!-- Custom Backend API URL Field -->
-            <div class="mb-5 text-left hidden">
-                <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Render Backend API URL</label>
-                <input type="text" id="auth-backend-url" placeholder="https://your-backend.onrender.com/api" class="w-full bg-main border border-border rounded-lg p-3 text-xs text-white outline-none focus:border-accent" />
+            <div id="auth-step-1" class="space-y-3">
+                <input type="text" id="auth-name" placeholder="Full Name" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent" />
+                <div class="relative">
+                    <input type="email" id="auth-email" placeholder="Gmail Address" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent pr-24" />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-medium">@gmail.com</span>
+                </div>
+                
+                <!-- Custom Backend API URL Field -->
+                <div class="mb-2 text-left hidden">
+                    <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Render Backend API URL</label>
+                    <input type="text" id="auth-backend-url" placeholder="https://your-backend.onrender.com/api" class="w-full bg-main border border-border rounded-lg p-3 text-xs text-white outline-none focus:border-accent" />
+                </div>
+
+                <button id="auth-send-otp-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors mt-2">
+                    Send Verification Code
+                </button>
             </div>
 
-            <button id="auth-submit-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors mb-3">
-                <span id="auth-submit-text">Continue to Infinity AI</span>
-            </button>
-            <p class="text-center text-xs text-textSecondary">Your history is saved to your Gmail account.</p>
+            <div id="auth-step-2" class="hidden space-y-3">
+                <p class="text-xs text-textSecondary text-center mb-1">We sent a verification code to <span id="auth-sent-email" class="text-white font-semibold"></span></p>
+                <input type="text" id="auth-otp" placeholder="6-Digit Code" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent text-center font-bold tracking-widest text-lg" maxLength="6" />
+                <button id="auth-verify-otp-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors">
+                    Verify &amp; Continue
+                </button>
+                <button id="auth-back-btn" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                    ← Go Back
+                </button>
+            </div>
+
+            <p class="text-center text-xs text-textSecondary mt-4">Your history is saved to your Gmail account.</p>
         </div>
     </div>
 
@@ -931,8 +945,11 @@
             shell.onpointerleave = () => { shell.classList.remove('active'); wrapper.style.setProperty('--pc-card-opacity','0'); setVars(shell.clientWidth/2, shell.clientHeight/2); };
         }
 
-        document.getElementById('auth-submit-btn').addEventListener('click', async () => {
-            const name  = document.getElementById('auth-name').value.trim();
+        let authTempName = '';
+        let authTempEmail = '';
+
+        document.getElementById('auth-send-otp-btn').addEventListener('click', async () => {
+            const name = document.getElementById('auth-name').value.trim();
             const email = document.getElementById('auth-email').value.trim();
             const backendUrl = document.getElementById('auth-backend-url').value.trim();
             const errorDiv = document.getElementById('auth-error');
@@ -951,7 +968,6 @@
             if (!email.includes('@')) {
                 finalEmail = email + '@gmail.com';
             } else {
-                // If it includes '@', it MUST have exactly one '@' and end with 'gmail.com' (case-insensitive)
                 const parts = email.split('@');
                 if (parts.length !== 2 || parts[1].toLowerCase() !== 'gmail.com') {
                     errorDiv.innerText = 'Only original Gmail addresses (@gmail.com) are accepted.';
@@ -965,22 +981,59 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}/auth/login`, {
+                errorDiv.classList.add('hidden');
+                const response = await fetch(`${API_URL}/auth/send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email: finalEmail })
+                    body: JSON.stringify({ email: finalEmail })
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
-                    errorDiv.innerText = data.error || 'Authentication failed.';
+                    errorDiv.innerText = data.error || 'Failed to request verification code.';
+                    errorDiv.classList.remove('hidden'); return;
+                }
+
+                authTempName = name;
+                authTempEmail = finalEmail;
+                
+                document.getElementById('auth-sent-email').textContent = finalEmail;
+                document.getElementById('auth-step-1').classList.add('hidden');
+                document.getElementById('auth-step-2').classList.remove('hidden');
+            } catch (err) {
+                errorDiv.innerText = 'Network error. Make sure the backend is running.';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('auth-verify-otp-btn').addEventListener('click', async () => {
+            const otp = document.getElementById('auth-otp').value.trim();
+            const errorDiv = document.getElementById('auth-error');
+
+            if (!otp) {
+                errorDiv.innerText = 'Please enter the verification code.';
+                errorDiv.classList.remove('hidden'); return;
+            }
+
+            try {
+                errorDiv.classList.add('hidden');
+                const response = await fetch(`${API_URL}/auth/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: authTempName, email: authTempEmail, otp })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorDiv.innerText = data.error || 'Verification failed.';
                     errorDiv.classList.remove('hidden'); return;
                 }
 
                 authToken  = data.token;
                 userEmail  = data.email;
-                userName   = data.name || name;
+                userName   = data.name || authTempName;
                 localStorage.setItem('infinity_token', authToken);
                 localStorage.setItem('infinity_email', userEmail);
                 localStorage.setItem('infinity_name',  userName);
@@ -995,15 +1048,32 @@
                 }
 
                 closeModal('auth-modal');
+                // Reset inputs and steps for next time
+                document.getElementById('auth-otp').value = '';
+                document.getElementById('auth-step-2').classList.add('hidden');
+                document.getElementById('auth-step-1').classList.remove('hidden');
+
                 updateAuthUI();
                 renderProjects();
                 renderSidebarHistory();
                 syncHistory();
 
+                // Alert parent window of successful login to sync state without refresh
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+                }
+
             } catch (err) {
                 errorDiv.innerText = 'Network error. Make sure the backend is running.';
                 errorDiv.classList.remove('hidden');
             }
+        });
+
+        document.getElementById('auth-back-btn').addEventListener('click', () => {
+            document.getElementById('auth-otp').value = '';
+            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-step-2').classList.add('hidden');
+            document.getElementById('auth-step-1').classList.remove('hidden');
         });
 
         window.logout = () => {
@@ -1029,6 +1099,11 @@
             renderProjects();
             renderSidebarHistory();
             startNewChat(false);
+
+            // Alert parent window to trigger logout globally
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'LOGOUT_TRIGGER' }, '*');
+            }
         };
 
         async function fetchHistory() {
@@ -1823,6 +1898,15 @@
                 if (chatIds.length === 0 || (chatIds.length === 1 && chatHistoryDb[chatIds[0]].messages.length === 0)) {
                     streamWelcomeMessage(name);
                 }
+            } else if (event.data.type === 'TRIGGER_LOGIN') {
+                if (typeof window.openAuthModal === 'function') {
+                    window.openAuthModal();
+                }
+            } else if (event.data.type === 'LOGOUT_TRIGGER') {
+                // Prevent loops: only logout if user is currently authenticated in the chatbot session
+                if (authToken && typeof window.logout === 'function') {
+                    window.logout();
+                }
             }
         });
 
@@ -1832,6 +1916,10 @@
 
         // Initialize Socket.io connection using root server address
         function initChatSocket() {
+            if (typeof io === 'undefined') {
+                console.warn('Socket.io library not loaded. Real-time collaboration is disabled.');
+                return;
+            }
             const socketUrl = API_URL.replace('/api', '');
             try {
                 socket = io(socketUrl, { transports: ['websocket', 'polling'] });

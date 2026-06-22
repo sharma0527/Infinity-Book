@@ -5,11 +5,9 @@ import FixedBook from "./components/FixedBook";
 import ShareMenu from "./components/ShareMenu";
 import SaveMenu from "./components/SaveMenu";
 import FlowingMenu from "./components/FlowingMenu";
-import HomePage from "./components/HomePage";
 import AIAssistant from "./components/AIAssistant";
 import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon, LogOut } from "lucide-react";
 import { io } from "socket.io-client";
-import { GoogleOAuthProvider } from '@react-oauth/google';
 
 import { API_URL } from "./config/api";
 
@@ -59,18 +57,16 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('infinity_token'));
   const [pages, setPages] = useState(getInitialPages);
   const [current, setCurrent] = useState(0);
-  const [view, setView] = useState(() => {
-    if (!localStorage.getItem('infinity_token')) return 'home';
-    const params = new URLSearchParams(window.location.search);
-    return params.get('doc') ? 'notebook' : 'notebook';
-  });
+  const [view, setView] = useState('notebook');
   const [collaborators, setCollaborators] = useState([]);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
-    const newDocId = Math.random().toString(36).substring(2, 10).toUpperCase();
-    window.history.pushState({}, '', `/?doc=${newDocId}`);
-    setView('notebook');
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('doc')) {
+      const newDocId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      window.history.pushState({}, '', `/?doc=${newDocId}`);
+    }
   };
 
   const handleLogout = () => {
@@ -79,8 +75,12 @@ export default function App() {
     localStorage.removeItem('infinity_email');
     localStorage.removeItem('infinity_picture');
     setIsAuthenticated(false);
-    setView('home');
     window.history.pushState({}, '', '/');
+
+    const iframe = document.querySelector('iframe[title="Infinity Intelligence Chat"]');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'LOGOUT_TRIGGER' }, '*');
+    }
   };
 
   const [mode, setMode] = useState("TEXT"); // 'TEXT' or 'PEN'
@@ -236,8 +236,15 @@ export default function App() {
   // Listen for iframe messages
   useEffect(() => {
     const handleMessage = (event) => {
-      if (event.data && event.data.type === 'CLOSE_PANEL') {
-        setAiPanelOpen(false);
+      if (event.data) {
+        if (event.data.type === 'CLOSE_PANEL') {
+          setAiPanelOpen(false);
+        } else if (event.data.type === 'LOGIN_SUCCESS') {
+          setIsAuthenticated(true);
+          setView('notebook');
+        } else if (event.data.type === 'LOGOUT_TRIGGER') {
+          handleLogout();
+        }
       }
     };
     window.addEventListener('message', handleMessage);
@@ -341,11 +348,7 @@ export default function App() {
     }));
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "missing_client_id"}>
-      {view === 'home' || !isAuthenticated ? (
-        <HomePage onLogin={handleLogin} />
-      ) : (
-        <div style={styles.appWrapper}>
+    <div style={styles.appWrapper}>
           {/* Dynamic Sidebar Overlay on Mobile */}
           {isMobile && sidebarOpen && (
             <div 
@@ -441,11 +444,6 @@ export default function App() {
                 <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', lineHeight: '20px' }}>∞</span>
                 <span style={styles.homeText}>INFINITY INTELLIGENCE</span>
               </button>
-              
-              <button onClick={handleLogout} style={{ ...styles.homeBtn, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }} title="Log out">
-                <LogOut size={20} color="#ef4444" />
-                <span style={{ ...styles.homeText, color: '#ef4444' }}>LOGOUT</span>
-              </button>
             </div>
             <div style={styles.menuContainer}>
               <FlowingMenu
@@ -461,6 +459,31 @@ export default function App() {
                 marqueeTextColor="#ffffff"
                 borderColor="#333333"
               />
+            </div>
+            <div style={styles.sidebarFooter}>
+              {isAuthenticated ? (
+                <button onClick={handleLogout} style={{ ...styles.homeBtn, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', width: '100%', justifyContent: 'center' }} title="Log out">
+                  <LogOut size={20} color="#ef4444" />
+                  <span style={{ ...styles.homeText, color: '#ef4444' }}>LOGOUT</span>
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setAiPanelOpen(true);
+                    setTimeout(() => {
+                      const iframe = document.querySelector('iframe[title="Infinity Intelligence Chat"]');
+                      if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage({ type: 'TRIGGER_LOGIN' }, '*');
+                      }
+                    }, 500);
+                  }} 
+                  style={{ ...styles.homeBtn, background: 'linear-gradient(135deg, #10a37f, #3b82f6)', border: 'none', width: '100%', justifyContent: 'center' }} 
+                  title="Sign In"
+                >
+                  <Sparkles size={20} color="#fff" />
+                  <span style={styles.homeText}>SIGN IN</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -717,9 +740,7 @@ export default function App() {
               ></iframe>
             </div>
           )}
-        </div>
-      )}
-    </GoogleOAuthProvider>
+    </div>
   );
 }
 
@@ -749,6 +770,15 @@ const styles = {
     flexDirection: "column",
     gap: "12px",
     alignItems: "stretch"
+  },
+  sidebarFooter: {
+    padding: "20px",
+    borderTop: "1px solid rgba(255,255,255,0.1)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    alignItems: "stretch",
+    background: "#0c0a0f"
   },
   homeBtn: {
     display: "flex",
