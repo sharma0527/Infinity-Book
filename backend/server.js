@@ -234,7 +234,7 @@ async function streamFromProvider(res, messages, provider) {
   const isGroq = provider === 'groq';
   const apiKey = isGroq ? process.env.GROQ_API_KEY : process.env.OPENROUTER_API_KEY;
   const endpoint = isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
-  const model = isGroq ? 'llama-3.3-70b-versatile' : 'meta-llama/llama-3.3-70b-instruct';
+  const model = isGroq ? 'llama-3.3-70b-versatile' : 'meta-llama/llama-3.3-70b-instruct:free';
 
   if (!apiKey) {
     throw new Error(`No API key configured for ${provider}`);
