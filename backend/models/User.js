@@ -14,7 +14,21 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        required: false,
+        default: 'passwordless'
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    picture: {
+        type: String,
+        default: ''
+    },
+    lastLogin: {
+        type: Date,
+        default: Date.now
     },
     history: {
         type: Object,

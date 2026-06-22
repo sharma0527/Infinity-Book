@@ -1,9 +1,51 @@
 import React, { useRef, useEffect, useState } from "react";
 
+const applyToolSettings = (context, tool, color) => {
+  if (tool === 'pencil') {
+    context.lineWidth = 1.2;
+    context.strokeStyle = '#4a4a5a'; // graphite color
+    context.globalAlpha = 0.7;
+    context.globalCompositeOperation = 'source-over';
+  } else if (tool === 'highlighter') {
+    context.lineWidth = 18;
+    context.strokeStyle = color;
+    context.globalAlpha = 0.4;
+    context.globalCompositeOperation = 'multiply';
+  } else {
+    // pen
+    context.lineWidth = 2.5;
+    context.strokeStyle = color || '#000000';
+    context.globalAlpha = 1.0;
+    context.globalCompositeOperation = 'source-over';
+  }
+};
+
+const redrawStrokes = (context, w, h, currentStrokes) => {
+  context.clearRect(0, 0, w, h);
+  if (!currentStrokes) return;
+  
+  currentStrokes.forEach(stroke => {
+    if (!stroke.points || stroke.points.length === 0) return;
+    applyToolSettings(context, stroke.tool, stroke.color);
+    
+    context.beginPath();
+    context.moveTo(stroke.points[0].x, stroke.points[0].y);
+    for (let i = 1; i < stroke.points.length; i++) {
+      context.lineTo(stroke.points[i].x, stroke.points[i].y);
+    }
+    context.stroke();
+  });
+};
+
 export default function DrawingCanvas({ strokes, setStrokes, isActiveMode, activeTool, activeColor }) {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [ctx, setCtx] = useState(null);
+  
+  const strokesRef = useRef(strokes);
+  useEffect(() => {
+    strokesRef.current = strokes;
+  }, [strokes]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -23,7 +65,7 @@ export default function DrawingCanvas({ strokes, setStrokes, isActiveMode, activ
         canvas.style.height = `${parent.clientHeight}px`;
         context.scale(dpr, dpr);
         
-        redrawStrokes(context, parent.clientWidth, parent.clientHeight, strokes);
+        redrawStrokes(context, parent.clientWidth, parent.clientHeight, strokesRef.current);
       }
     };
     
@@ -40,43 +82,6 @@ export default function DrawingCanvas({ strokes, setStrokes, isActiveMode, activ
         }
      }
   }, [strokes, ctx]);
-
-  const applyToolSettings = (context, tool, color) => {
-    if (tool === 'pencil') {
-      context.lineWidth = 1.2;
-      context.strokeStyle = '#4a4a5a'; // graphite color
-      context.globalAlpha = 0.7;
-      context.globalCompositeOperation = 'source-over';
-    } else if (tool === 'highlighter') {
-      context.lineWidth = 18;
-      context.strokeStyle = color;
-      context.globalAlpha = 0.4;
-      context.globalCompositeOperation = 'multiply';
-    } else {
-      // pen
-      context.lineWidth = 2.5;
-      context.strokeStyle = color || '#000000';
-      context.globalAlpha = 1.0;
-      context.globalCompositeOperation = 'source-over';
-    }
-  };
-
-  const redrawStrokes = (context, w, h, currentStrokes) => {
-    context.clearRect(0, 0, w, h);
-    if (!currentStrokes) return;
-    
-    currentStrokes.forEach(stroke => {
-      if (!stroke.points || stroke.points.length === 0) return;
-      applyToolSettings(context, stroke.tool, stroke.color);
-      
-      context.beginPath();
-      context.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (let i = 1; i < stroke.points.length; i++) {
-        context.lineTo(stroke.points[i].x, stroke.points[i].y);
-      }
-      context.stroke();
-    });
-  };
 
   const startDrawing = (e) => {
     if (!isActiveMode) return;

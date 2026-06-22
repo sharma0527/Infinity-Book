@@ -7,8 +7,9 @@ import SaveMenu from "./components/SaveMenu";
 import FlowingMenu from "./components/FlowingMenu";
 import HomePage from "./components/HomePage";
 import AIAssistant from "./components/AIAssistant";
-import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon, LogOut } from "lucide-react";
 import { io } from "socket.io-client";
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 import { API_URL } from "./config/api";
 
@@ -31,7 +32,7 @@ const getSocketUrl = () => {
     try {
       const url = new URL(savedBackend);
       return url.origin;
-    } catch (e) {
+    } catch {
       // ignore
     }
   }
@@ -39,7 +40,10 @@ const getSocketUrl = () => {
 };
 
 const socket = io(getSocketUrl(), { 
-  autoConnect: false 
+  autoConnect: false,
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000
 });
 
 export default function App() {
@@ -52,20 +56,42 @@ export default function App() {
     return [{ html: "", strokes: [] }];
   };
 
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('infinity_token'));
   const [pages, setPages] = useState(getInitialPages);
   const [current, setCurrent] = useState(0);
   const [view, setView] = useState(() => {
+    if (!localStorage.getItem('infinity_token')) return 'home';
     const params = new URLSearchParams(window.location.search);
-    return params.get('doc') ? 'notebook' : 'home';
+    return params.get('doc') ? 'notebook' : 'notebook';
   });
+  const [collaborators, setCollaborators] = useState([]);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    const newDocId = Math.random().toString(36).substring(2, 10).toUpperCase();
+    window.history.pushState({}, '', `/?doc=${newDocId}`);
+    setView('notebook');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('infinity_token');
+    localStorage.removeItem('infinity_name');
+    localStorage.removeItem('infinity_email');
+    localStorage.removeItem('infinity_picture');
+    setIsAuthenticated(false);
+    setView('home');
+    window.history.pushState({}, '', '/');
+  };
 
   const [mode, setMode] = useState("TEXT"); // 'TEXT' or 'PEN'
   const [activeTool, setActiveTool] = useState("pen"); // 'pen', 'pencil', 'highlighter'
   const [activeColor, setActiveColor] = useState("#000000");
   const [activeFont, setActiveFont] = useState("Caveat");
   const [jumpPage, setJumpPage] = useState("");
-  const [isViewOnly, setIsViewOnly] = useState(false);
-  const [roomId, setRoomId] = useState("");
+  const isViewOnly = (() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('access') === 'view' || params.get('access') === 'comment';
+  })();
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -79,10 +105,12 @@ export default function App() {
   const [orbPos, setOrbPos] = useState(null);
   const orbRef = React.useRef(null);
   const dragState = React.useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [isDraggingOrb, setIsDraggingOrb] = useState(false);
 
   const [panelPos, setPanelPos] = useState(null);
   const panelRef = React.useRef(null);
   const panelDragState = React.useRef({ isDragging: false, startX: 0, startY: 0 });
+  const [isDraggingPanel, setIsDraggingPanel] = useState(false);
 
   const handlePanelPointerDown = (e) => {
     panelDragState.current = { isDragging: false, startX: e.clientX, startY: e.clientY };
@@ -92,6 +120,7 @@ export default function App() {
 
     const onPointerMove = (moveEv) => {
       panelDragState.current.isDragging = true;
+      setIsDraggingPanel(true);
       setPanelPos({
         x: moveEv.clientX - offsetX,
         y: moveEv.clientY - offsetY
@@ -101,6 +130,7 @@ export default function App() {
     const onPointerUp = () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      setIsDraggingPanel(false);
     };
 
     window.addEventListener('pointermove', onPointerMove);
@@ -116,6 +146,7 @@ export default function App() {
     const onPointerMove = (moveEv) => {
       if (Math.abs(moveEv.clientX - dragState.current.startX) > 5 || Math.abs(moveEv.clientY - dragState.current.startY) > 5) {
         dragState.current.isDragging = true;
+        setIsDraggingOrb(true);
       }
       setOrbPos({
         x: moveEv.clientX - offsetX,
@@ -126,6 +157,7 @@ export default function App() {
     const onPointerUp = () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      setIsDraggingOrb(false);
     };
 
     window.addEventListener('pointermove', onPointerMove);
@@ -147,17 +179,20 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('access') === 'view' || params.get('access') === 'comment') {
-      setIsViewOnly(true);
-    }
     
     if (view === 'notebook') {
       let docId = params.get('doc');
-      setRoomId(docId);
+
+      // Build user metadata for live presence tracking
+      const user = {
+        name: localStorage.getItem('infinity_name') || 'Guest',
+        email: localStorage.getItem('infinity_email') || 'guest@infinity.book',
+        picture: localStorage.getItem('infinity_picture') || ''
+      };
 
       // Stream Initiation
       socket.connect();
-      socket.emit("join_document", docId);
+      socket.emit("join_document", { roomId: docId, user });
 
       const handleInitSync = (serverPages) => {
         // If the cloud already holds data for this session, instantly populate it to memory
@@ -170,16 +205,33 @@ export default function App() {
         setPages(latestPagesArray);
       };
 
+      const handlePresenceChange = (activeUsers) => {
+        setCollaborators(activeUsers);
+      };
+
       socket.on("init_sync", handleInitSync);
       socket.on("sync_pages", handleSyncPages);
+      socket.on("presence_change", handlePresenceChange);
 
       return () => {
         socket.off("init_sync", handleInitSync);
         socket.off("sync_pages", handleSyncPages);
+        socket.off("presence_change", handlePresenceChange);
         socket.disconnect();
       };
     }
   }, [view]);
+
+  // Heartbeat keep-warm effect to query /health route on Render/Railway every 5 minutes
+  useEffect(() => {
+    const pingServer = () => {
+      const url = getSocketUrl();
+      fetch(`${url}/health`).catch(() => {});
+    };
+    pingServer(); // initial ping
+    const interval = setInterval(pingServer, 300000); // 5 mins
+    return () => clearInterval(interval);
+  }, []);
 
   // Listen for iframe messages
   useEffect(() => {
@@ -289,12 +341,9 @@ export default function App() {
     }));
 
   return (
-    <>
-      {view === 'home' ? (
-        <HomePage onStart={() => {
-          const newDocId = Math.random().toString(36).substring(2, 10).toUpperCase();
-          window.location.href = `/?doc=${newDocId}`;
-        }} />
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || "missing_client_id"}>
+      {view === 'home' || !isAuthenticated ? (
+        <HomePage onLogin={handleLogin} />
       ) : (
         <div style={styles.appWrapper}>
           {/* Dynamic Sidebar Overlay on Mobile */}
@@ -392,6 +441,11 @@ export default function App() {
                 <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', lineHeight: '20px' }}>∞</span>
                 <span style={styles.homeText}>INFINITY INTELLIGENCE</span>
               </button>
+              
+              <button onClick={handleLogout} style={{ ...styles.homeBtn, background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }} title="Log out">
+                <LogOut size={20} color="#ef4444" />
+                <span style={{ ...styles.homeText, color: '#ef4444' }}>LOGOUT</span>
+              </button>
             </div>
             <div style={styles.menuContainer}>
               <FlowingMenu
@@ -415,7 +469,7 @@ export default function App() {
             <SaveMenu pages={pages} current={current} />
 
             {/* SHARE MENU */}
-            <ShareMenu />
+            <ShareMenu collaborators={collaborators} />
 
             {/* 3D BOOK VISUAL (Auto-hides on mobile) */}
             <FixedBook />
@@ -578,7 +632,7 @@ export default function App() {
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255,255,255,0.2)',
               boxShadow: '0 8px 30px rgba(255, 95, 162, 0.3), inset 0 0 10px rgba(255,255,255,0.2)',
-              cursor: dragState.current?.isDragging ? 'grabbing' : 'pointer',
+              cursor: isDraggingOrb ? 'grabbing' : 'pointer',
               zIndex: 100,
               display: 'flex',
               alignItems: 'center',
@@ -586,7 +640,7 @@ export default function App() {
               color: '#fff',
               fontWeight: 'bold',
               fontSize: '15px',
-              transition: dragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              transition: isDraggingOrb ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               transform: aiPanelOpen ? 'scale(0)' : 'scale(1)',
               pointerEvents: aiPanelOpen ? 'none' : 'auto',
               touchAction: 'none'
@@ -631,7 +685,7 @@ export default function App() {
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: panelDragState.current?.isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                transition: isDraggingPanel ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
               }}>
               <div 
                 onPointerDown={isMobile ? null : handlePanelPointerDown}
@@ -658,14 +712,14 @@ export default function App() {
               </div>
               <iframe 
                 src="/chatbot.ai/index.html" 
-                style={{ width: '100%', height: '100%', border: 'none', pointerEvents: panelDragState.current?.isDragging ? 'none' : 'auto' }}
+                style={{ width: '100%', height: '100%', border: 'none', pointerEvents: isDraggingPanel ? 'none' : 'auto' }}
                 title="Infinity Intelligence Chat"
               ></iframe>
             </div>
           )}
         </div>
       )}
-    </>
+    </GoogleOAuthProvider>
   );
 }
 

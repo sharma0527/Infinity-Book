@@ -73,6 +73,7 @@ function MenuItem({ text, image, speed, textColor, marqueeBgColor, marqueeTextCo
   }, [text, image]);
 
   useEffect(() => {
+    let animToKill = null;
     const setupMarquee = () => {
       if (!marqueeInnerRef.current) return;
 
@@ -87,12 +88,14 @@ function MenuItem({ text, image, speed, textColor, marqueeBgColor, marqueeTextCo
       }
 
       /*
-      animationRef.current = gsap.to(marqueeInnerRef.current, {
+      const anim = gsap.to(marqueeInnerRef.current, {
         x: -contentWidth,
         duration: speed,
         ease: 'none',
         repeat: -1
       });
+      animationRef.current = anim;
+      animToKill = anim;
       */
     };
 
@@ -100,8 +103,8 @@ function MenuItem({ text, image, speed, textColor, marqueeBgColor, marqueeTextCo
 
     return () => {
       clearTimeout(timer);
-      if (animationRef.current) {
-        animationRef.current.kill();
+      if (animToKill) {
+        animToKill.kill();
       }
     };
   }, [text, image, repetitions, speed]);

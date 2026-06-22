@@ -762,6 +762,12 @@
                 }
             } else {
                 startNewChat(false); // Always start with a blank state
+                const chatIds = Object.keys(chatHistoryDb);
+                if (chatIds.length === 0 || (chatIds.length === 1 && chatHistoryDb[chatIds[0]].messages.length === 0)) {
+                    setTimeout(() => {
+                        streamWelcomeMessage(userName);
+                    }, 500);
+                }
             }
 
             // Initialize the collaborative socket connection
@@ -1761,11 +1767,62 @@
             const homeBtn = document.getElementById('home-btn');
             if (homeBtn) homeBtn.style.display = 'none';
         }
+        function streamWelcomeMessage(name) {
+            if (receiving) return;
+            receiving = true;
+            
+            if (!chatHistoryDb[activeChatId]) {
+                chatHistoryDb[activeChatId] = { title: "Welcome Chat", date: Date.now(), messages: [], project: activeProject };
+                renderSidebarHistory();
+            }
+
+            const welcomeText = `Hello ${name || 'there'}! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
+            
+            const elements = createMessageElement("", "ai");
+            const messageBubble = elements.bubble;
+            messageBubble.classList.add('blinking-cursor');
+            chatbox.scrollTop = chatbox.scrollHeight;
+
+            const words = welcomeText.split(' ');
+            let wordIndex = 0;
+            let currentText = "";
+
+            const interval = setInterval(() => {
+                if (wordIndex < words.length) {
+                    currentText += words[wordIndex] + (wordIndex === words.length - 1 ? '' : ' ');
+                    messageBubble.innerHTML = marked.parse(currentText);
+                    addCopyButtonsToPre(messageBubble);
+                    chatbox.scrollTop = chatbox.scrollHeight;
+                    wordIndex++;
+                } else {
+                    clearInterval(interval);
+                    if (messageBubble) {
+                        messageBubble.classList.remove('blinking-cursor');
+                    }
+                    receiving = false;
+                    
+                    // Save to history and emit to socket
+                    chatHistoryDb[activeChatId].messages.push({ role: 'ai', content: welcomeText });
+                    saveHistory();
+                    if (socket) {
+                        socket.emit('update_chat', { chatId: activeChatId, messages: chatHistoryDb[activeChatId].messages });
+                    }
+                }
+            }, 50);
+        }
+
         // Context injection from notebook
         window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'INJECT_CONTEXT') {
+            if (!event.data) return;
+            if (event.data.type === 'INJECT_CONTEXT') {
                 window.attachedFileContext = event.data.text;
                 window.attachedFileName = 'Notebook Page';
+            } else if (event.data.type === 'TRIGGER_WELCOME') {
+                const name = event.data.userName || userName;
+                const chatIds = Object.keys(chatHistoryDb);
+                if (chatIds.length === 0 || (chatIds.length === 1 && chatHistoryDb[chatIds[0]].messages.length === 0)) {
+                    streamWelcomeMessage(name);
+                }
             }
         });
 

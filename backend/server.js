@@ -69,29 +69,87 @@ mongoose.connection.on("error", (err) => {
 
 // Cache memory for real-time document sync. 
 // Note: When server reboots, active ephemeral cache restarts!
+const Book = require('./models/Book');
 const roomData = new Map();
+const activeRooms = new Map(); // roomId -> Map(socketId -> userObj)
 
 io.on('connection', (socket) => {
   console.log('User joined server stream:', socket.id);
 
-  socket.on('join_document', (roomId) => {
+  socket.on('join_document', async (data) => {
+    let roomId, user;
+    if (data && typeof data === 'object') {
+      roomId = data.roomId;
+      user = data.user;
+    } else {
+      roomId = data;
+    }
+
+    if (!roomId) return;
+
     socket.join(roomId);
     socket.roomId = roomId;
-    console.log(`Client ${socket.id} manifested Document ${roomId}`);
+
+    // Presence tracking
+    if (!activeRooms.has(roomId)) {
+      activeRooms.set(roomId, new Map());
+    }
+    const roomUsers = activeRooms.get(roomId);
+    
+    const userProfile = {
+      id: socket.id,
+      name: user?.name || 'Guest',
+      email: user?.email || 'guest@infinity.book',
+      picture: user?.picture || '',
+      avatar: (user?.name || 'G').charAt(0).toUpperCase()
+    };
+    roomUsers.set(socket.id, userProfile);
+    
+    console.log(`Client ${socket.id} (${userProfile.name}) manifested Document ${roomId}`);
+
+    // Broadcast updated presence list
+    io.to(roomId).emit('presence_change', Array.from(roomUsers.values()));
 
     // Push the active collaborative state back to the newly joined member instantly
     if (roomData.has(roomId)) {
       socket.emit('init_sync', roomData.get(roomId));
+    } else {
+      try {
+        const book = await Book.findById(roomId);
+        if (book && book.content && book.content.length > 0) {
+          roomData.set(roomId, book.content);
+          socket.emit('init_sync', book.content);
+        } else {
+          const initialPages = [{ html: "", strokes: [] }];
+          roomData.set(roomId, initialPages);
+          socket.emit('init_sync', initialPages);
+        }
+      } catch (err) {
+        console.error("Error loading book on join:", err);
+        const initialPages = [{ html: "", strokes: [] }];
+        socket.emit('init_sync', initialPages);
+      }
     }
   });
 
-  socket.on('update_pages', (latestPagesArray) => {
+  socket.on('update_pages', async (latestPagesArray) => {
     if (socket.roomId) {
       // Overwrite ephemeral document storage so late joiners don't miss data
       roomData.set(socket.roomId, latestPagesArray);
 
       // Blast changes directly to all other collaborators in the room
       socket.to(socket.roomId).emit('sync_pages', latestPagesArray);
+
+      // Asynchronously persist the changes to MongoDB
+      try {
+        await Book.findOneAndUpdate(
+          { _id: socket.roomId },
+          { content: latestPagesArray },
+          { upsert: true, new: true }
+        );
+      } catch (err) {
+        console.error("Error autosaving book content to DB:", err);
+      }
     }
   });
 
@@ -114,6 +172,15 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected from stream:', socket.id);
+    if (socket.roomId && activeRooms.has(socket.roomId)) {
+      const roomUsers = activeRooms.get(socket.roomId);
+      roomUsers.delete(socket.id);
+      if (roomUsers.size === 0) {
+        activeRooms.delete(socket.roomId);
+      } else {
+        io.to(socket.roomId).emit('presence_change', Array.from(roomUsers.values()));
+      }
+    }
   });
 });
 
@@ -121,65 +188,20 @@ io.on('connection', (socket) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/history', historyRoutes);
 
+// Health Route for keep-warm pings
+app.get('/health', (req, res) => {
+  res.json({ status: "ok", timestamp: Date.now() });
+});
+
+const Chat = require('./models/Chat');
+
 // Local Intelligent Fallback Engine when no OpenRouter API keys are configured or all keys fail
 function streamMockResponse(res, messages) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
-  const lastUserMsg = messages[messages.length - 1]?.content || "";
-  let answer = "";
-
-  if (/draw|sketch|pencil|highlighter|pen/i.test(lastUserMsg)) {
-    answer = `I see you are interested in sketching or drawing! I am running in local backup mode (since the AI connection is offline), but I can guide you:
-1. Click on the **Pen**, **Pencil**, or **Highlighter** tool in the bottom menu bar to sketch.
-2. Select your drawing color using the color circle picker.
-3. If you want to add text alongside your sketches, just type in the input bar and press Enter!`;
-  } else if (/share|collaborate|invite|room|friend/i.test(lastUserMsg)) {
-    answer = `Collaboration is one of the best features of the Infinity Book! 
-To collaborate with friends:
-1. Click the **"Share Workspace"** button in the top right.
-2. Copy the secure live link and send it to your friends.
-3. When they open it, their inputs and drawings will sync instantly on your page in real-time using WebSockets!`;
-  } else if (/save|export|pdf|download/i.test(lastUserMsg)) {
-    answer = `You can easily preserve your work! 
-1. Use the **Save Menu** in the upper part of the sidebar or workspace area.
-2. You can download your current page as an image or export the entire book as a JSON backup so you can load it back later on any machine.`;
-  } else if (/what is ai|about infinity/i.test(lastUserMsg)) {
-    answer = `Hello! I am Infinity AI, your intelligent copilot.
-
-*Note: I am currently running in a local fallback engine since the OpenRouter API connection is offline.*
-
-Even in backup mode, I am here to help you brainstorm and organize your book. You can:
-- Write and sketch collaboratively in real-time.
-- Manage multiple pages using the navigation arrows.
-- Export your work at any time.
-
-# What is Artificial Intelligence (AI)?
-Artificial Intelligence (AI) is a branch of computer science that enables machines to perform tasks that normally require human intelligence.
-AI systems can learn from data, recognize patterns, understand language, solve problems, make decisions, and generate content.
-
-Examples of AI include:
-• Virtual assistants and chatbots
-• Language translation systems
-• Recommendation engines
-• Image and speech recognition
-• Autonomous systems
-• AI-powered writing and coding assistants
-
-Infinity AI uses advanced artificial intelligence to help users learn, create, research, write, and solve problems more effectively.
-
-What would you like to build or discuss next?`;
-  } else {
-    answer = `Hello! I am Infinity AI, your intelligent copilot. 
-
-Even in backup mode, I am here to help you brainstorm and organize your book. You can:
-- **Write and sketch** collaboratively in real-time.
-- **Manage multiple pages** using the navigation arrows.
-- **Export your work** at any time.
-
-What would you like to build or discuss next?`;
-  }
+  const answer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
 
   const words = answer.split(' ');
   let wordIndex = 0;
@@ -206,11 +228,27 @@ What would you like to build or discuss next?`;
   }, 50); // 50ms per word is perfect, speedy and feels very premium!
 }
 
+
 // Streaming Chat Endpoint with Grok API Failover Pool and Local Mock Fallback
 app.post('/api/chat', async (req, res) => {
-  let { messages } = req.body;
+  let { messages, chatId, userId } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: "Invalid messages array." });
+  }
+
+  // Save the latest user message to DB
+  const lastUserMsg = messages[messages.length - 1];
+  if (lastUserMsg && lastUserMsg.role === 'user' && chatId && userId) {
+      try {
+          await Chat.create({
+              userId,
+              chatId,
+              role: 'user',
+              message: lastUserMsg.content
+          });
+      } catch (err) {
+          console.error("DB Save Error:", err);
+      }
   }
 
   // Inject the required Infinity AI System Persona if not already present
@@ -242,6 +280,11 @@ Always prioritize correctness, clarity, and usefulness.`;
 
   if (!apiKey) {
     console.warn(`[OpenRouter] No API key configured in OPENROUTER_API_KEY. Streaming local mock fallback response.`);
+    // Save mock assistant message
+    const mockAnswer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
+    if (chatId && userId) {
+        Chat.create({ userId, chatId, role: 'assistant', message: mockAnswer }).catch(console.error);
+    }
     return streamMockResponse(res, messages);
   }
 
@@ -274,17 +317,45 @@ Always prioritize correctness, clarity, and usefulness.`;
     res.setHeader('Connection', 'keep-alive');
 
     const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
     let done = false;
+    let fullResponseText = "";
 
     while (!done) {
       const { value, done: doneReading } = await reader.read();
       done = doneReading;
       if (value) {
         res.write(value);
+        // Try to parse SSE format to extract content for DB
+        const chunkStr = decoder.decode(value, { stream: true });
+        const lines = chunkStr.split('\n');
+        for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                try {
+                    const parsed = JSON.parse(line.substring(6));
+                    if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                        fullResponseText += parsed.choices[0].delta.content;
+                    }
+                } catch (e) {
+                    // Ignore parse errors on partial chunks
+                }
+            }
+        }
       }
     }
 
     res.end();
+    
+    // Save AI response to DB
+    if (chatId && userId && fullResponseText) {
+        Chat.create({
+            userId,
+            chatId,
+            role: 'assistant',
+            message: fullResponseText
+        }).catch(err => console.error("Failed to save assistant msg:", err));
+    }
+
     console.log(`[OpenRouter] Stream completed successfully.`);
     return; // Success!
 
@@ -299,6 +370,10 @@ Always prioritize correctness, clarity, and usefulness.`;
 
     // If it fails before sending headers, fallback to mock response
     console.warn(`[OpenRouter] Request failed before streaming. Falling back to local mock response.`);
+    const mockAnswer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
+    if (chatId && userId) {
+        Chat.create({ userId, chatId, role: 'assistant', message: mockAnswer }).catch(console.error);
+    }
     return streamMockResponse(res, messages);
   }
 });

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Share2, Link as LinkIcon, Check, Shield, UserPlus, Users, Sparkles, QrCode, X, Trash2, Clock, Eye, MessageSquare, Edit3 } from 'lucide-react';
 
-export default function ShareMenu() {
+const getImpureId = () => Date.now() + Math.random();
+
+export default function ShareMenu({ collaborators: liveCollaborators = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState('access'); // 'access', 'users', 'ai'
@@ -14,12 +16,30 @@ export default function ShareMenu() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('view');
   
-  // Simulated Collaboration Data
-  const [collaborators, setCollaborators] = useState([
-    { id: 1, name: 'Sharma', email: 'sharma@gmail.com', role: 'owner', avatar: 'S' },
-    { id: 2, name: 'John Doe', email: 'john@gmail.com', role: 'edit', avatar: 'J' },
-    { id: 3, name: 'AI Co-Pilot', email: 'ai@infinity.book', role: 'comment', avatar: '∞' }
-  ]);
+  // Invited/Live Collaboration Data
+  const [invitedCollaborators, setInvitedCollaborators] = useState([]);
+
+  // Derive active collaborators list dynamically to avoid state sync effect cascading renders
+  const collaborators = (() => {
+    if (liveCollaborators && liveCollaborators.length > 0) {
+      const mappedLive = liveCollaborators.map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        picture: c.picture,
+        role: c.role || (c.email.includes('guest') ? 'view' : 'edit'),
+        avatar: c.avatar
+      }));
+      return [...mappedLive, ...invitedCollaborators];
+    }
+    return [
+      { id: 1, name: 'Sharma', email: 'sharma@gmail.com', role: 'owner', avatar: 'S' },
+      { id: 2, name: 'John Doe', email: 'john@gmail.com', role: 'edit', avatar: 'J' },
+      { id: 3, name: 'AI Co-Pilot', email: 'ai@infinity.book', role: 'comment', avatar: '∞' },
+      ...invitedCollaborators
+    ];
+  })();
+
   const [activityLog, setActivityLog] = useState([
     { id: 1, text: 'Sharma created this collaborative notebook', time: '10m ago' },
     { id: 2, text: 'John Doe joined and started live drawing', time: '5m ago' },
@@ -56,17 +76,19 @@ export default function ShareMenu() {
     if (!inviteEmail.trim()) return;
     
     const name = inviteEmail.split('@')[0];
+    const newId = getImpureId();
     const newCollaborator = {
-      id: Date.now(),
+      id: newId,
       name: name.charAt(0).toUpperCase() + name.slice(1),
       email: inviteEmail,
       role: inviteRole,
       avatar: name.charAt(0).toUpperCase()
     };
     
-    setCollaborators([...collaborators, newCollaborator]);
+    setInvitedCollaborators([...invitedCollaborators, newCollaborator]);
+    const logId = getImpureId();
     setActivityLog([
-      { id: Date.now(), text: `Invited ${inviteEmail} as ${inviteRole}`, time: 'Just now' },
+      { id: logId, text: `Invited ${inviteEmail} as ${inviteRole}`, time: 'Just now' },
       ...activityLog
     ]);
     setInviteEmail('');
@@ -76,9 +98,10 @@ export default function ShareMenu() {
     const removed = collaborators.find(c => c.id === id);
     if (!removed || removed.role === 'owner') return;
     
-    setCollaborators(collaborators.filter(c => c.id !== id));
+    setInvitedCollaborators(invitedCollaborators.filter(c => c.id !== id));
+    const logId = getImpureId();
     setActivityLog([
-      { id: Date.now(), text: `Revoked access for ${removed.email}`, time: 'Just now' },
+      { id: logId, text: `Revoked access for ${removed.email}`, time: 'Just now' },
       ...activityLog
     ]);
   };
@@ -586,9 +609,14 @@ export default function ShareMenu() {
                               alignItems: 'center',
                               justifyContent: 'center',
                               fontWeight: '700',
-                              fontSize: '13px'
+                              fontSize: '13px',
+                              overflow: 'hidden'
                             }}>
-                              {user.avatar}
+                              {user.picture ? (
+                                <img src={user.picture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                user.avatar
+                              )}
                             </div>
                             <div>
                               <h6 style={{ margin: 0, fontSize: '13px', color: '#e2e8f0', fontWeight: '600' }}>

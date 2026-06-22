@@ -139,30 +139,38 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
 
   const handleInput = () => setHtml(editorRef.current.innerHTML);
 
+  // Helper to query the live DOM element instead of direct state reference mutation
+  const getLiveImg = () => {
+    if (!selectedImg || !editorRef.current) return null;
+    return Array.from(editorRef.current.getElementsByTagName('img')).find(el => el === selectedImg) || null;
+  };
+
   // ─── Shape ───────────────────────────────────────────────────────────────
   const applyShape = (shape) => {
-    if (!selectedImg) return;
+    const img = getLiveImg();
+    if (!img) return;
     setActiveShape(shape.id);
-    selectedImg.style.borderRadius = shape.radius;
+    img.style.borderRadius = shape.radius;
     if (shape.id === 'circle') {
-      const sz = Math.min(selectedImg.offsetWidth, selectedImg.offsetHeight);
-      selectedImg.style.width     = sz + 'px';
-      selectedImg.style.height    = sz + 'px';
-      selectedImg.style.objectFit = 'cover';
+      const sz = Math.min(img.offsetWidth, img.offsetHeight);
+      img.style.width     = sz + 'px';
+      img.style.height    = sz + 'px';
+      img.style.objectFit = 'cover';
     } else {
-      selectedImg.style.height    = '';
-      selectedImg.style.objectFit = '';
+      img.style.height    = '';
+      img.style.objectFit = '';
     }
     setHtml(editorRef.current.innerHTML);
-    setTimeout(() => measureImg(selectedImg), 0);
+    setTimeout(() => measureImg(img), 0);
   };
 
   // ─── Delete ───────────────────────────────────────────────────────────────
   const deleteImage = () => {
-    if (!selectedImg) return;
-    const wrapper = selectedImg.parentElement;
+    const img = getLiveImg();
+    if (!img) return;
+    const wrapper = img.parentElement;
     if (wrapper && wrapper !== editorRef.current) wrapper.remove();
-    else selectedImg.remove();
+    else img.remove();
     setHtml(editorRef.current.innerHTML);
     setSelectedImg(null);
     setImgBox(null);
@@ -172,12 +180,13 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
   const startMove = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!selectedImg) return;
+    const img = getLiveImg();
+    if (!img) return;
 
     // Convert wrapper to absolute positioning first
-    makeAbsolute(selectedImg);
+    makeAbsolute(img);
 
-    const wrapper  = selectedImg.parentElement;
+    const wrapper  = img.parentElement;
     const { t, l } = getWrapperPos(wrapper);
     const startX   = e.clientX;
     const startY   = e.clientY;
@@ -196,7 +205,7 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
       const newLeft = op.startLeft + dx;
       wrapper.style.top  = newTop  + 'px';
       wrapper.style.left = newLeft + 'px';
-      measureImg(selectedImg);
+      measureImg(img);
     };
 
     const onUp = () => {
@@ -217,16 +226,17 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
   const startResize = (e, corner) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!selectedImg) return;
+    const img = getLiveImg();
+    if (!img) return;
 
     const startX   = e.clientX;
     const startY   = e.clientY;
-    const startW   = selectedImg.offsetWidth;
-    const startH   = selectedImg.offsetHeight;
+    const startW   = img.offsetWidth;
+    const startH   = img.offsetHeight;
     const isCircle = activeShape === 'circle';
 
     // Also capture wrapper position in case we need to adjust for tl/tr/bl corners
-    const wrapper = selectedImg.parentElement;
+    const wrapper = img.parentElement;
     const { t: startTop, l: startLeft } = getWrapperPos(wrapper);
 
     opRef.current = { type: 'resize', startX, startY, startW, startH, corner, isCircle, startTop, startLeft };
@@ -242,9 +252,12 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
         const s = Math.max(60, op.startW + Math.max(dx, dy));
         newW = s; newH = s;
       }
-      selectedImg.style.width  = newW + 'px';
-      selectedImg.style.height = op.isCircle ? newH + 'px' : '';
-      measureImg(selectedImg);
+      const liveImg = getLiveImg();
+      if (liveImg) {
+        liveImg.style.width  = newW + 'px';
+        liveImg.style.height = op.isCircle ? newH + 'px' : '';
+      }
+      measureImg(liveImg);
     };
 
     const onUp = () => {

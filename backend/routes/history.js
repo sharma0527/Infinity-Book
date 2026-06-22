@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Chat = require('../models/Chat');
 
 const router = express.Router();
 
@@ -46,4 +47,25 @@ router.get('/sync', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/chat', authMiddleware, async (req, res) => {
+    try {
+        const chats = await Chat.find({ userId: req.user.userId }).sort({ timestamp: 1 });
+        res.json({ chats });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch chat history.' });
+    }
+});
+
+router.get('/chat/:chatId', authMiddleware, async (req, res) => {
+    try {
+        const chats = await Chat.find({ userId: req.user.userId, chatId: req.params.chatId }).sort({ timestamp: 1 });
+        res.json({ chats });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch chat history.' });
+    }
+});
+
 module.exports = router;
+

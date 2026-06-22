@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef as useRefCB } from "react";
 import { Send, Type, PenTool, Edit2, Highlighter, Mic, ImagePlus, Home, Settings, GripHorizontal } from 'lucide-react';
 import Dock from './Dock';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'motion/react';
 
 const FONTS = [
@@ -21,7 +22,7 @@ export default function ChatBar({
   activeColor, setActiveColor,
   activeFont, setActiveFont
 }) {
-  const [input, setInput] = useState("");
+
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -50,15 +51,7 @@ export default function ChatBar({
 
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  const send = () => {
-    if (!input.trim()) return;
-    addText(input);
-    setInput("");
-  };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') send();
-  }
 
   const handleToolSelect = (tool, e) => {
     e.preventDefault();

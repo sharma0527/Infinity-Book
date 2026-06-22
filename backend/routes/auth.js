@@ -1,9 +1,55 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 
 const router = express.Router();
+const googleClient = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
+router.post('/google', async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token) return res.status(400).json({ error: 'Token is required' });
+
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.VITE_GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        
+        const { sub: googleId, email, name, picture } = payload;
+        
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = new User({
+                googleId,
+                email,
+                name,
+                picture,
+                lastLogin: new Date()
+            });
+        } else {
+            if (!user.googleId) user.googleId = googleId;
+            if (picture) user.picture = picture;
+            user.lastLogin = new Date();
+        }
+        await user.save();
+        
+        const jwtToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || 'infinity_fallback_secret_key_2026', { expiresIn: '30d' });
+        
+        res.json({
+            token: jwtToken,
+            name: user.name,
+            email: user.email,
+            picture: user.picture,
+            history: user.history || {},
+            projects: user.projects || []
+        });
+    } catch (err) {
+        console.error('Google Auth Error:', err);
+        res.status(401).json({ error: 'Invalid Google token' });
+    }
+});
 const disposableDomains = [
     'mailinator.com', '10minutemail.com', 'guerillamail.com', 'yopmail.com',
     'tempmail.com', 'throwawaymail.com', 'temp-mail.org', 'tempmail.net',
