@@ -409,6 +409,43 @@ app.get('/test', (req, res) => {
   });
 });
 
+// Test Email Route for Gmail OTP Verification verification
+app.get('/test-email', async (req, res) => {
+  try {
+    const nodemailer = require('nodemailer');
+    const emailUser = process.env.EMAIL || process.env.EMAIL_USER;
+    let emailPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+    if (emailPass) {
+      emailPass = emailPass.trim().replace(/\s+/g, '');
+    }
+    const recipient = req.query.to || "yourpersonalemail@gmail.com";
+
+    if (!emailUser || !emailPass) {
+      return res.status(400).send("SMTP credentials (EMAIL and EMAIL_PASSWORD) not configured in .env");
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    });
+
+    await transporter.sendMail({
+      from: `"Infinity AI" <${emailUser}>`,
+      to: recipient,
+      subject: "Test Email",
+      text: "Infinity AI Email Working"
+    });
+
+    res.send(`Email successfully sent to ${recipient}! Check your inbox.`);
+  } catch (err) {
+    console.error("Test Email Error:", err);
+    res.status(500).send("Failed to send email: " + err.message);
+  }
+});
+
 // Fallback Route for Single Page Application
 app.get('*any', (req, res) => {
   const indexPath = path.join(__dirname, '../frontend/dist/index.html');

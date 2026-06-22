@@ -29,17 +29,23 @@ let transporter = null;
 async function getTransporter() {
     if (transporter) return transporter;
 
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    const emailUser = process.env.EMAIL || process.env.EMAIL_USER;
+    let emailPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+    if (emailPass) {
+        emailPass = emailPass.trim().replace(/\s+/g, '');
+    }
+
+    if (emailUser && emailPass) {
         console.log('[Email] Initializing SMTP transporter with configured credentials.');
         transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
+                user: emailUser,
+                pass: emailPass
             }
         });
     } else {
-        console.log('[Email] EMAIL_USER/EMAIL_PASS not configured. Generating transient Ethereal SMTP test credentials...');
+        console.log('[Email] SMTP credentials not configured. Generating transient Ethereal SMTP test credentials...');
         try {
             const testAccount = await nodemailer.createTestAccount();
             transporter = nodemailer.createTransport({
@@ -102,7 +108,7 @@ router.post('/send-otp', async (req, res) => {
             const activeTransporter = await getTransporter();
             if (activeTransporter) {
                 const mailOptions = {
-                    from: '"Infinity AI" <no-reply@infinity.book>',
+                    from: `"Infinity AI" <${process.env.EMAIL || process.env.EMAIL_USER || 'no-reply@infinity.book'}>`,
                     to: normalizedEmail,
                     subject: 'Your Infinity AI Verification Code',
                     text: `Hello!\n\nYour 6-digit verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nInfinity AI Team`,

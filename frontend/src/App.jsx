@@ -6,6 +6,7 @@ import ShareMenu from "./components/ShareMenu";
 import SaveMenu from "./components/SaveMenu";
 import FlowingMenu from "./components/FlowingMenu";
 import AIAssistant from "./components/AIAssistant";
+import HomePage from "./components/HomePage";
 import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon, LogOut } from "lucide-react";
 import { io } from "socket.io-client";
 
@@ -57,7 +58,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('infinity_token'));
   const [pages, setPages] = useState(getInitialPages);
   const [current, setCurrent] = useState(0);
-  const [view, setView] = useState('notebook');
+  const [view, setView] = useState(() => localStorage.getItem('infinity_token') ? 'notebook' : 'home');
   const [collaborators, setCollaborators] = useState([]);
 
   const handleLogin = () => {
@@ -75,6 +76,7 @@ export default function App() {
     localStorage.removeItem('infinity_email');
     localStorage.removeItem('infinity_picture');
     setIsAuthenticated(false);
+    setView('home');
     window.history.pushState({}, '', '/');
 
     const iframe = document.querySelector('iframe[title="Infinity Intelligence Chat"]');
@@ -346,6 +348,10 @@ export default function App() {
       image: `https://picsum.photos/600/400?random=${idx + 1}`,
       originalIndex: idx
     }));
+
+  if (view === 'home') {
+    return <HomePage onLogin={() => setView('notebook')} />;
+  }
 
   return (
     <div style={styles.appWrapper}>
