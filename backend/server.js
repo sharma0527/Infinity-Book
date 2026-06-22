@@ -229,7 +229,84 @@ function streamMockResponse(res, messages) {
 }
 
 
-// Streaming Chat Endpoint with Grok API Failover Pool and Local Mock Fallback
+// Provider streaming handler
+async function streamFromProvider(res, messages, provider) {
+  const isGroq = provider === 'groq';
+  const apiKey = isGroq ? process.env.GROQ_API_KEY : process.env.OPENROUTER_API_KEY;
+  const endpoint = isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
+  const model = isGroq ? 'llama-3.3-70b-versatile' : 'meta-llama/llama-3.3-70b-instruct';
+
+  if (!apiKey) {
+    throw new Error(`No API key configured for ${provider}`);
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${apiKey}`
+  };
+
+  if (!isGroq) {
+    headers['HTTP-Referer'] = 'https://infinity-book.pages.dev';
+    headers['X-Title'] = 'Infinity Book';
+  }
+
+  console.log(`[${provider.toUpperCase()}] Attempting streaming chat completion using model ${model}...`);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: model,
+      messages: messages,
+      temperature: 0.7,
+      stream: true
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`${provider.toUpperCase()} HTTP error ${response.status}: ${errorText}`);
+  }
+
+  // Configure SSE response headers (if not already sent)
+  if (!res.headersSent) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let done = false;
+  let fullResponseText = "";
+
+  while (!done) {
+    const { value, done: doneReading } = await reader.read();
+    done = doneReading;
+    if (value) {
+      res.write(value);
+      const chunkStr = decoder.decode(value, { stream: true });
+      const lines = chunkStr.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const parsed = JSON.parse(line.substring(6));
+            if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+              fullResponseText += parsed.choices[0].delta.content;
+            }
+          } catch (e) {
+            // Ignore parse errors on partial chunks
+          }
+        }
+      }
+    }
+  }
+
+  res.end();
+  return fullResponseText;
+}
+
+
+// Streaming Chat Endpoint with Groq API Failover Pool and Local Mock Fallback
 app.post('/api/chat', async (req, res) => {
   let { messages, chatId, userId } = req.body;
   if (!messages || !Array.isArray(messages)) {
@@ -275,12 +352,32 @@ Always prioritize correctness, clarity, and usefulness.`;
     messages = [{ role: 'system', content: systemPrompt }, ...messages];
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  console.log("OpenRouter Active:", !!apiKey);
+  let fullResponseText = "";
+  let success = false;
 
-  if (!apiKey) {
-    console.warn(`[OpenRouter] No API key configured in OPENROUTER_API_KEY. Streaming local mock fallback response.`);
-    // Save mock assistant message
+  // 1. Try OpenRouter First
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      fullResponseText = await streamFromProvider(res, messages, 'openrouter');
+      success = true;
+    } catch (err) {
+      console.error(`[OpenRouter] Failover trigger:`, err.message);
+    }
+  }
+
+  // 2. Try Groq Second (if OpenRouter skipped or failed)
+  if (!success && process.env.GROQ_API_KEY) {
+    try {
+      fullResponseText = await streamFromProvider(res, messages, 'groq');
+      success = true;
+    } catch (err) {
+      console.error(`[Groq] Failover trigger:`, err.message);
+    }
+  }
+
+  // 3. Fallback to Local Mock response if both providers failed
+  if (!success) {
+    console.warn(`[Failover] Both providers failed or keys are missing. Streaming local mock response.`);
     const mockAnswer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
     if (chatId && userId) {
         Chat.create({ userId, chatId, role: 'assistant', message: mockAnswer }).catch(console.error);
@@ -288,94 +385,17 @@ Always prioritize correctness, clarity, and usefulness.`;
     return streamMockResponse(res, messages);
   }
 
-  try {
-    console.log(`[OpenRouter] Attempting streaming chat completion...`);
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://infinity-book.pages.dev',
-        'X-Title': 'Infinity Book'
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-3.3-70b-instruct',
-        messages: messages,
-        temperature: 0.7,
-        stream: true
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`HTTP error ${response.status}: ${errorText}`);
-    }
-
-    // Configure SSE response headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let done = false;
-    let fullResponseText = "";
-
-    while (!done) {
-      const { value, done: doneReading } = await reader.read();
-      done = doneReading;
-      if (value) {
-        res.write(value);
-        // Try to parse SSE format to extract content for DB
-        const chunkStr = decoder.decode(value, { stream: true });
-        const lines = chunkStr.split('\n');
-        for (const line of lines) {
-            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                try {
-                    const parsed = JSON.parse(line.substring(6));
-                    if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-                        fullResponseText += parsed.choices[0].delta.content;
-                    }
-                } catch (e) {
-                    // Ignore parse errors on partial chunks
-                }
-            }
-        }
-      }
-    }
-
-    res.end();
-    
-    // Save AI response to DB
-    if (chatId && userId && fullResponseText) {
-        Chat.create({
-            userId,
-            chatId,
-            role: 'assistant',
-            message: fullResponseText
-        }).catch(err => console.error("Failed to save assistant msg:", err));
-    }
-
-    console.log(`[OpenRouter] Stream completed successfully.`);
-    return; // Success!
-
-  } catch (err) {
-    console.error(`[OpenRouter] Request failed:`, err.message);
-    // If headers are already sent, we failed in the middle of streaming, so we must stop.
-    if (res.headersSent) {
-      res.write(`data: ${JSON.stringify({ error: "Stream interrupted mid-transmission.", details: err.message })}\n\n`);
-      res.end();
-      return;
-    }
-
-    // If it fails before sending headers, fallback to mock response
-    console.warn(`[OpenRouter] Request failed before streaming. Falling back to local mock response.`);
-    const mockAnswer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
-    if (chatId && userId) {
-        Chat.create({ userId, chatId, role: 'assistant', message: mockAnswer }).catch(console.error);
-    }
-    return streamMockResponse(res, messages);
+  // Save successful AI response to DB
+  if (chatId && userId && fullResponseText) {
+      Chat.create({
+          userId,
+          chatId,
+          role: 'assistant',
+          message: fullResponseText
+      }).catch(err => console.error("Failed to save assistant msg:", err));
   }
+
+  return;
 });
 
 // Serve static files from the React frontend build
