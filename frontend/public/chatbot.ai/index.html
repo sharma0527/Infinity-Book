@@ -40,6 +40,9 @@
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    <!-- Google Identity Services SDK -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- Document Parsers -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
@@ -263,6 +266,42 @@
             justify-content:center;background:rgba(0,0,0,.65);opacity:0;transition:opacity .25s;pointer-events:none}
         .pc-camera-overlay span { font-size: 10px; font-weight: 600; color: #fff; margin-top: 4px; }
         .pc-avatar-initials:hover .pc-camera-overlay{opacity:1}
+
+        /* Glassmorphic Auth Modal & Form Elements */
+        .auth-glass {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .auth-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .auth-input:focus {
+            border-color: #10a37f;
+            box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        .auth-tab-btn {
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            color: #94a3b8;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .auth-tab-btn.active {
+            color: #ffffff;
+            border-bottom-color: #10a37f;
+        }
     </style>
 </head>
 
@@ -577,51 +616,146 @@
         </div>
     </div>
 
-    <!-- Auth Modal - Name + Gmail only -->
-    <div id="auth-modal" class="fixed inset-0 bg-black/60 z-[99999] hidden flex items-center justify-center">
-        <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl relative">
-            <button onclick="closeModal('auth-modal')" class="absolute top-4 right-4 text-textSecondary hover:text-white">
+    <!-- Auth Modal - Production Ready Glassmorphic Layout -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/70 z-[99999] hidden flex items-center justify-center p-4">
+        <div class="auth-glass rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onclick="closeModal('auth-modal')" class="absolute top-4 right-4 text-textSecondary hover:text-white transition-colors">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
-            <!-- Infinity Logo -->
+            
+            <!-- Logo & Title -->
             <div class="flex flex-col items-center mb-6">
-                <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg mb-3">∞</div>
-                <h3 class="text-xl font-semibold text-center" id="auth-title">Welcome to Infinity</h3>
-                <p class="text-xs text-textSecondary mt-1 text-center">Sign in with your Full Name &amp; Gmail</p>
+                <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center text-xl font-bold text-white shadow-lg mb-2">∞</div>
+                <h3 class="text-xl font-bold text-white tracking-tight" id="auth-modal-title">Infinity AI</h3>
+                <p class="text-xs text-textSecondary mt-0.5" id="auth-modal-subtitle">Journaling & Collaboration Workspace</p>
             </div>
 
-            <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/50 text-red-500 text-xs p-3 rounded-lg mb-4 text-center"></div>
+            <!-- Tab Switcher -->
+            <div class="flex border-b border-white/10 mb-5" id="auth-tab-container">
+                <button onclick="switchAuthMode('login')" id="tab-login" class="auth-tab-btn active flex-1 text-center">Login</button>
+                <button onclick="switchAuthMode('signup')" id="tab-signup" class="auth-tab-btn flex-1 text-center">Sign Up</button>
+            </div>
 
-            <div id="auth-step-1" class="space-y-3">
-                <input type="text" id="auth-name" placeholder="Full Name" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent" />
-                <div class="relative">
-                    <input type="email" id="auth-email" placeholder="Gmail Address" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent pr-24" />
-                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-medium">@gmail.com</span>
-                </div>
+            <!-- Error Banner -->
+            <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg mb-4 text-center"></div>
+            
+            <!-- Success Banner -->
+            <div id="auth-success" class="hidden bg-accent/10 border border-accent/20 text-accent text-xs p-3 rounded-lg mb-4 text-center"></div>
+
+            <!-- Forms Container -->
+            <div class="space-y-4">
                 
-                <!-- Custom Backend API URL Field -->
-                <div class="mb-2 text-left hidden">
-                    <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Render Backend API URL</label>
-                    <input type="text" id="auth-backend-url" placeholder="https://your-backend.onrender.com/api" class="w-full bg-main border border-border rounded-lg p-3 text-xs text-white outline-none focus:border-accent" />
+                <!-- LOGIN FORM -->
+                <div id="form-login" class="space-y-3">
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email Address</label>
+                        <input type="email" id="login-email" placeholder="name@gmail.com" class="auth-input" />
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="text-[10px] font-semibold text-textSecondary block uppercase tracking-wider">Password</label>
+                            <button onclick="switchAuthMode('forgot')" class="text-[10px] text-accent hover:underline font-semibold">Forgot Password?</button>
+                        </div>
+                        <input type="password" id="login-password" placeholder="••••••••" class="auth-input" />
+                    </div>
+                    <button onclick="handlePasswordLogin()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20 mt-2">
+                        Login
+                    </button>
                 </div>
 
-                <button id="auth-send-otp-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors mt-2">
-                    Send Verification Code
-                </button>
+                <!-- SIGNUP FORM (Name + Email Stage) -->
+                <div id="form-signup-step1" class="space-y-3 hidden">
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Full Name</label>
+                        <input type="text" id="signup-name" placeholder="John Doe" class="auth-input" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
+                        <div class="relative">
+                            <input type="email" id="signup-email" placeholder="username" class="auth-input pr-24" />
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-semibold">@gmail.com</span>
+                        </div>
+                    </div>
+                    <button id="signup-send-otp-btn" onclick="handleSendOtp('signup')" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20 mt-2">
+                        Send Verification Code
+                    </button>
+                </div>
+
+                <!-- SIGNUP FORM (OTP + Password Stage) -->
+                <div id="form-signup-step2" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary text-center mb-2">
+                        Verification code sent to <span id="signup-sent-email" class="text-white font-semibold"></span>
+                    </p>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit Code</label>
+                        <input type="text" id="signup-otp" placeholder="••••••" class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Create Password</label>
+                        <input type="password" id="signup-password" placeholder="••••••••" class="auth-input" />
+                    </div>
+                    <button onclick="completeSignup()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20">
+                        Verify &amp; Create Account
+                    </button>
+                    <p class="text-xs text-textSecondary text-center mt-3" id="signup-resend-container">
+                        Didn't receive code? <button onclick="resendOtp('signup')" id="signup-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
+                    </p>
+                    <button onclick="goBackToStep1('signup')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Change Email
+                    </button>
+                </div>
+
+                <!-- FORGOT PASSWORD FORM (Email Stage) -->
+                <div id="form-forgot-step1" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset code.</p>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@gmail.com" class="auth-input" />
+                    </div>
+                    <button id="forgot-send-otp-btn" onclick="handleSendOtp('forgot')" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20 mt-2">
+                        Send Verification Code
+                    </button>
+                    <button onclick="switchAuthMode('login')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Back to Login
+                    </button>
+                </div>
+
+                <!-- FORGOT PASSWORD FORM (OTP + Reset Stage) -->
+                <div id="form-forgot-step2" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary text-center mb-2">
+                        Reset code sent to <span id="forgot-sent-email" class="text-white font-semibold"></span>
+                    </p>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit Code</label>
+                        <input type="text" id="forgot-otp" placeholder="••••••" class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">New Password</label>
+                        <input type="password" id="forgot-password" placeholder="••••••••" class="auth-input" />
+                    </div>
+                    <button onclick="completeReset()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20">
+                        Reset Password &amp; Login
+                    </button>
+                    <p class="text-xs text-textSecondary text-center mt-3" id="forgot-resend-container">
+                        Didn't receive code? <button onclick="resendOtp('forgot')" id="forgot-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
+                    </p>
+                    <button onclick="goBackToStep1('forgot')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Change Email
+                    </button>
+                </div>
+
             </div>
 
-            <div id="auth-step-2" class="hidden space-y-3">
-                <p class="text-xs text-textSecondary text-center mb-1">We sent a verification code to <span id="auth-sent-email" class="text-white font-semibold"></span></p>
-                <input type="text" id="auth-otp" placeholder="6-Digit Code" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent text-center font-bold tracking-widest text-lg" maxLength="6" />
-                <button id="auth-verify-otp-btn" class="w-full py-3 bg-accent hover:bg-accentHover rounded-lg text-sm font-bold transition-colors">
-                    Verify &amp; Continue
-                </button>
-                <button id="auth-back-btn" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                    ← Go Back
-                </button>
-            </div>
+            <!-- Hidden Custom Backend URL field to satisfy existing codebase structure -->
+            <input type="hidden" id="auth-backend-url" />
 
-            <p class="text-center text-xs text-textSecondary mt-4">Your history is saved to your Gmail account.</p>
+            <!-- Google Sign-In Integrations -->
+            <div id="google-signin-container" class="mt-5 pt-5 border-t border-white/10 flex flex-col items-center">
+                <p class="text-[10px] font-semibold text-textSecondary uppercase tracking-wider mb-3">Or continue with</p>
+                <div id="google-login-btn"></div>
+            </div>
+            
+            <p class="text-center text-[10px] text-textSecondary mt-4">By continuing, you agree to Infinity AI's terms.</p>
         </div>
     </div>
 
@@ -820,9 +954,7 @@
 
         window.openAuthModal = () => {
             document.getElementById('auth-modal').classList.remove('hidden');
-            document.getElementById('auth-error').classList.add('hidden');
-            document.getElementById('auth-name').value = '';
-            document.getElementById('auth-email').value = '';
+            switchAuthMode('login');
             
             let parentApiUrl = null;
             try {
@@ -833,11 +965,16 @@
                 // Ignore
             }
             
-            document.getElementById('auth-backend-url').value = localStorage.getItem('infinity_backend_url') || 
-                parentApiUrl ||
-                (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                    ? 'http://localhost:5000/api' 
-                    : 'https://infinity-book-1.onrender.com/api');
+            const backendInput = document.getElementById('auth-backend-url');
+            if (backendInput) {
+                backendInput.value = localStorage.getItem('infinity_backend_url') || 
+                    parentApiUrl ||
+                    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                        ? 'http://localhost:5000/api' 
+                        : 'https://infinity-book-1.onrender.com/api');
+            }
+            
+            initGoogleSignIn();
         };
 
         // Profile Card Modal
@@ -947,134 +1084,398 @@
 
         let authTempName = '';
         let authTempEmail = '';
+        let countdownTimer = null;
+        let cooldownSeconds = 0;
+        let googleInitialized = false;
 
-        document.getElementById('auth-send-otp-btn').addEventListener('click', async () => {
-            const name = document.getElementById('auth-name').value.trim();
-            const email = document.getElementById('auth-email').value.trim();
-            const backendUrl = document.getElementById('auth-backend-url').value.trim();
+        function switchAuthMode(mode) {
             const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
 
-            if (!name || name.length < 2) {
-                errorDiv.innerText = 'Please enter your full name (at least 2 characters).';
-                errorDiv.classList.remove('hidden'); return;
+            const tabContainer = document.getElementById('auth-tab-container');
+            const tabLogin = document.getElementById('tab-login');
+            const tabSignup = document.getElementById('tab-signup');
+            const googleContainer = document.getElementById('google-signin-container');
+
+            // Hide all form panels
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-signup-step1').classList.add('hidden');
+            document.getElementById('form-signup-step2').classList.add('hidden');
+            document.getElementById('form-forgot-step1').classList.add('hidden');
+            document.getElementById('form-forgot-step2').classList.add('hidden');
+
+            // Reset tab styles
+            tabLogin.classList.remove('active');
+            tabSignup.classList.remove('active');
+            tabContainer.classList.remove('hidden');
+            googleContainer.classList.remove('hidden');
+
+            if (mode === 'login') {
+                tabLogin.classList.add('active');
+                document.getElementById('form-login').classList.remove('hidden');
+                setTimeout(() => document.getElementById('login-email').focus(), 50);
+            } else if (mode === 'signup') {
+                tabSignup.classList.add('active');
+                document.getElementById('form-signup-step1').classList.remove('hidden');
+                setTimeout(() => document.getElementById('signup-name').focus(), 50);
+            } else if (mode === 'forgot') {
+                tabContainer.classList.add('hidden');
+                googleContainer.classList.add('hidden');
+                document.getElementById('form-forgot-step1').classList.remove('hidden');
+                setTimeout(() => document.getElementById('forgot-email').focus(), 50);
             }
-            if (!email) {
-                errorDiv.innerText = 'Please enter your Gmail address.';
-                errorDiv.classList.remove('hidden'); return;
+        }
+
+        function startResendCountdown(type) {
+            clearInterval(countdownTimer);
+            cooldownSeconds = 60;
+            const resendBtn = document.getElementById(`${type}-resend-btn`);
+            if (resendBtn) {
+                resendBtn.disabled = true;
+                resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
             }
 
-            // Auto-append @gmail.com if user only typed username
-            let finalEmail = email;
-            if (!email.includes('@')) {
-                finalEmail = email + '@gmail.com';
-            } else {
+            countdownTimer = setInterval(() => {
+                cooldownSeconds--;
+                if (cooldownSeconds <= 0) {
+                    clearInterval(countdownTimer);
+                    if (resendBtn) {
+                        resendBtn.disabled = false;
+                        resendBtn.textContent = 'Resend Code';
+                    }
+                } else {
+                    if (resendBtn) {
+                        resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
+                    }
+                }
+            }, 1000);
+        }
+
+        function resendOtp(type) {
+            handleSendOtp(type, true);
+        }
+
+        async function handleSendOtp(type, isResend = false) {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            let email = '';
+            let name = '';
+
+            if (type === 'signup') {
+                name = document.getElementById('signup-name').value.trim();
+                email = document.getElementById('signup-email').value.trim();
+                if (!isResend && (!name || name.length < 2)) {
+                    showError('Please enter your full name (at least 2 characters).');
+                    return;
+                }
+                if (!email) {
+                    showError('Please enter your Gmail address.');
+                    return;
+                }
+                if (!email.includes('@')) {
+                    email = email + '@gmail.com';
+                }
                 const parts = email.split('@');
                 if (parts.length !== 2 || parts[1].toLowerCase() !== 'gmail.com') {
-                    errorDiv.innerText = 'Only original Gmail addresses (@gmail.com) are accepted.';
-                    errorDiv.classList.remove('hidden');
+                    showError('Only original Gmail addresses (@gmail.com) are accepted.');
+                    return;
+                }
+            } else {
+                email = document.getElementById('forgot-email').value.trim();
+                if (!email) {
+                    showError('Please enter your Gmail address.');
+                    return;
+                }
+                if (!email.includes('@')) {
+                    email = email + '@gmail.com';
+                }
+                const parts = email.split('@');
+                if (parts.length !== 2 || parts[1].toLowerCase() !== 'gmail.com') {
+                    showError('Only original Gmail addresses (@gmail.com) are accepted.');
                     return;
                 }
             }
 
-            if (backendUrl) {
-                normalizeAndSetApiUrl(backendUrl);
+            authTempName = name || authTempName;
+            authTempEmail = email.toLowerCase();
+
+            // Optimistic UI Transition: Immediately go to Step 2
+            document.getElementById(`${type}-sent-email`).textContent = authTempEmail;
+            document.getElementById(`form-${type}-step1`).classList.add('hidden');
+            document.getElementById(`form-${type}-step2`).classList.remove('hidden');
+
+            const otpInput = document.getElementById(`${type}-otp`);
+            if (otpInput) {
+                setTimeout(() => otpInput.focus(), 100);
+            }
+
+            startResendCountdown(type);
+            showSuccess('Sending verification code...');
+
+            const url = type === 'signup' ? `${API_URL}/auth/send-otp` : `${API_URL}/auth/forgot-password/send-otp`;
+            const payload = type === 'signup' ? { email: authTempEmail, requestType: 'signup' } : { email: authTempEmail };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'Failed to send verification code.');
+                    goBackToStep1(type);
+                    clearInterval(countdownTimer);
+                } else {
+                    showSuccess(data.message || 'Verification code sent successfully.');
+                }
+            } catch (err) {
+                showError('Network error. Please check your connection.');
+                goBackToStep1(type);
+                clearInterval(countdownTimer);
+            }
+        }
+
+        function goBackToStep1(type) {
+            document.getElementById(`form-${type}-step2`).classList.add('hidden');
+            document.getElementById(`form-${type}-step1`).classList.remove('hidden');
+            document.getElementById(`${type}-otp`).value = '';
+            if (type === 'signup') {
+                document.getElementById('signup-password').value = '';
+            } else {
+                document.getElementById('forgot-password').value = '';
+            }
+        }
+
+        async function handlePasswordLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showError('Please enter both email and password.');
+                return;
             }
 
             try {
-                errorDiv.classList.add('hidden');
-                const response = await fetch(`${API_URL}/auth/send-otp`, {
+                showSuccess('Logging in...');
+                const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: finalEmail })
+                    body: JSON.stringify({ email, password })
                 });
 
                 const data = await response.json();
-
                 if (!response.ok) {
-                    errorDiv.innerText = data.error || 'Failed to request verification code.';
-                    errorDiv.classList.remove('hidden'); return;
+                    showError(data.error || 'Login failed.');
+                    return;
                 }
 
-                authTempName = name;
-                authTempEmail = finalEmail;
-                
-                document.getElementById('auth-sent-email').textContent = finalEmail;
-                document.getElementById('auth-step-1').classList.add('hidden');
-                document.getElementById('auth-step-2').classList.remove('hidden');
+                saveSessionAndLogin(data);
             } catch (err) {
-                errorDiv.innerText = 'Network error. Make sure the backend is running.';
-                errorDiv.classList.remove('hidden');
+                showError('Network error. Make sure the backend is running.');
             }
-        });
+        }
 
-        document.getElementById('auth-verify-otp-btn').addEventListener('click', async () => {
-            const otp = document.getElementById('auth-otp').value.trim();
+        async function completeSignup() {
+            const otp = document.getElementById('signup-otp').value.trim();
+            const password = document.getElementById('signup-password').value;
+
+            if (!otp || !password) {
+                showError('Please enter both verification code and password.');
+                return;
+            }
+
+            if (password.length < 6) {
+                showError('Password must be at least 6 characters.');
+                return;
+            }
+
+            try {
+                showSuccess('Creating account...');
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: authTempName,
+                        email: authTempEmail,
+                        otp,
+                        password
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'Signup failed.');
+                    return;
+                }
+
+                saveSessionAndLogin(data);
+            } catch (err) {
+                showError('Network error during account creation.');
+            }
+        }
+
+        async function completeReset() {
+            const otp = document.getElementById('forgot-otp').value.trim();
+            const newPassword = document.getElementById('forgot-password').value;
+
+            if (!otp || !newPassword) {
+                showError('Please enter both verification code and new password.');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showError('Password must be at least 6 characters.');
+                return;
+            }
+
+            try {
+                showSuccess('Resetting password...');
+                const response = await fetch(`${API_URL}/auth/forgot-password/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: authTempEmail,
+                        otp,
+                        newPassword
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'Reset failed.');
+                    return;
+                }
+
+                saveSessionAndLogin(data);
+            } catch (err) {
+                showError('Network error during password reset.');
+            }
+        }
+
+        function saveSessionAndLogin(data) {
+            authToken  = data.token;
+            userEmail  = data.email;
+            userName   = data.name;
+            localStorage.setItem('infinity_token', authToken);
+            localStorage.setItem('infinity_email', userEmail);
+            localStorage.setItem('infinity_name',  userName);
+            if (data.picture) {
+                localStorage.setItem('infinity_profile_pic', data.picture);
+            }
+
+            if (data.history && Object.keys(data.history).length > 0) {
+                chatHistoryDb = data.history;
+                localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
+            }
+            if (data.projects && data.projects.length > 0) {
+                projectsDb = data.projects;
+                localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
+            }
+
+            closeModal('auth-modal');
+            clearAuthInputs();
+
+            updateAuthUI();
+            renderProjects();
+            renderSidebarHistory();
+            syncHistory();
+
+            // Alert parent window of successful login to sync state without refresh
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+            }
+        }
+
+        function showError(msg) {
             const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            successDiv.classList.add('hidden');
+            errorDiv.innerText = msg;
+            errorDiv.classList.remove('hidden');
+        }
 
-            if (!otp) {
-                errorDiv.innerText = 'Please enter the verification code.';
-                errorDiv.classList.remove('hidden'); return;
+        function showSuccess(msg) {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.innerText = msg;
+            successDiv.classList.remove('hidden');
+        }
+
+        function clearAuthInputs() {
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('signup-name').value = '';
+            document.getElementById('signup-email').value = '';
+            document.getElementById('signup-otp').value = '';
+            document.getElementById('signup-password').value = '';
+            document.getElementById('forgot-email').value = '';
+            document.getElementById('forgot-otp').value = '';
+            document.getElementById('forgot-password').value = '';
+            
+            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-success').classList.add('hidden');
+        }
+
+        function initGoogleSignIn() {
+            if (googleInitialized) return;
+            if (typeof google === 'undefined') {
+                setTimeout(initGoogleSignIn, 500);
+                return;
             }
+
+            let clientId = null;
+            try {
+                if (window.parent && window.parent.GOOGLE_CLIENT_ID) {
+                    clientId = window.parent.GOOGLE_CLIENT_ID;
+                }
+            } catch (e) {}
+
+            if (!clientId) {
+                clientId = '846733221975-43pt1k3ch4oah8m60q1jcrgrdki3vgrr.apps.googleusercontent.com';
+            }
+
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleCredentialResponse
+            });
+
+            google.accounts.id.renderButton(
+                document.getElementById('google-login-btn'),
+                { theme: 'outline', size: 'large', width: 280 }
+            );
+
+            googleInitialized = true;
+        }
+
+        async function handleCredentialResponse(response) {
+            const errorDiv = document.getElementById('auth-error');
+            if (errorDiv) errorDiv.classList.add('hidden');
 
             try {
-                errorDiv.classList.add('hidden');
-                const response = await fetch(`${API_URL}/auth/verify-otp`, {
+                const res = await fetch(`${API_URL}/auth/google`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: authTempName, email: authTempEmail, otp })
+                    body: JSON.stringify({ token: response.credential })
                 });
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    errorDiv.innerText = data.error || 'Verification failed.';
-                    errorDiv.classList.remove('hidden'); return;
+                const data = await res.json();
+                if (!res.ok) {
+                    showError(data.error || 'Google authentication failed.');
+                    return;
                 }
 
-                authToken  = data.token;
-                userEmail  = data.email;
-                userName   = data.name || authTempName;
-                localStorage.setItem('infinity_token', authToken);
-                localStorage.setItem('infinity_email', userEmail);
-                localStorage.setItem('infinity_name',  userName);
-
-                if (data.history && Object.keys(data.history).length > 0) {
-                    chatHistoryDb = data.history;
-                    localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
-                }
-                if (data.projects && data.projects.length > 0) {
-                    projectsDb = data.projects;
-                    localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
-                }
-
-                closeModal('auth-modal');
-                // Reset inputs and steps for next time
-                document.getElementById('auth-otp').value = '';
-                document.getElementById('auth-step-2').classList.add('hidden');
-                document.getElementById('auth-step-1').classList.remove('hidden');
-
-                updateAuthUI();
-                renderProjects();
-                renderSidebarHistory();
-                syncHistory();
-
-                // Alert parent window of successful login to sync state without refresh
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
-                }
-
+                saveSessionAndLogin(data);
             } catch (err) {
-                errorDiv.innerText = 'Network error. Make sure the backend is running.';
-                errorDiv.classList.remove('hidden');
+                showError('Network error during Google Sign-In.');
             }
-        });
-
-        document.getElementById('auth-back-btn').addEventListener('click', () => {
-            document.getElementById('auth-otp').value = '';
-            document.getElementById('auth-error').classList.add('hidden');
-            document.getElementById('auth-step-2').classList.add('hidden');
-            document.getElementById('auth-step-1').classList.remove('hidden');
-        });
+        }
 
         window.logout = () => {
             authToken = null;
