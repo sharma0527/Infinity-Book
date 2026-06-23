@@ -337,3 +337,28 @@
   margin: 0;
   z-index: 2;
 }
+
+/* Subtitle Highlights */
+.highlight-blue {
+  color: #6ea8ff;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(110, 168, 255, 0.3);
+}
+
+.highlight-purple {
+  color: #c37cff;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(195, 124, 255, 0.3);
+}
+
+.highlight-pink {
+  color: #ff5ea8;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(255, 94, 168, 0.3);
+}
+
+.highlight-teal {
+  color: #10a37f;
+  font-weight: 600;
+  text-shadow: 0 0 10px rgba(16, 163, 127, 0.3);
+}

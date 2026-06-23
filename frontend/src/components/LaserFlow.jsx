@@ -221,7 +221,20 @@ void mainImage(out vec4 fc,in vec2 frag){
     float LF=L+fog;
     float dith=(h21(frag)-0.5)*(DITHER_STRENGTH/255.0);
     float tone=g(LF+w);
-    vec3 col=tone*uColor+dith;
+    // Multi-color gradient for the laser flow (matching #6ea8ff, #c37cff, #ff5ea8 theme)
+    vec3 col1 = vec3(0.43, 0.66, 1.0); // #6ea8ff (Light Blue)
+    vec3 col2 = vec3(0.76, 0.49, 1.0); // #c37cff (Purple/Violet)
+    vec3 col3 = vec3(1.0, 0.37, 0.66); // #ff5ea8 (Pink)
+    
+    // Blend factor based on diagonal position and time
+    float colorShift = sin(iTime * 0.45) * 0.2;
+    float blend = clamp(((uvc.x + uvc.y) / 160.0) * 0.5 + 0.5 + colorShift, 0.0, 1.0);
+    vec3 gradCol = mix(mix(col1, col2, blend), col3, smoothstep(0.4, 0.8, blend));
+    
+    // Blend with uniform uColor (default fallback)
+    vec3 finalBeamColor = mix(uColor, gradCol, 0.85);
+    
+    vec3 col=tone*finalBeamColor+dith;
     float alpha=clamp(g(L+w*0.6)+dith*0.6,0.0,1.0);
     float nxE=abs((frag.x-C.x)*invW),xF=pow(clamp(1.0-smoothstep(EDGE_X0,EDGE_X1,nxE),0.0,1.0),EDGE_X_GAMMA);
     float scene=LF+max(0.0,w)*0.5,hi=smoothstep(EDGE_LUMA_T0,EDGE_LUMA_T1,scene);
@@ -263,7 +276,7 @@ export const LaserFlow = ({
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const uniformsRef = useRef(null);
-  const hasFadedRef = useRef(false);
+  const hasFadedRef = useRef(true);
   const rectRef = useRef(null);
   const baseDprRef = useRef(1);
   const currentDprRef = useRef(1);
