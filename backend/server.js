@@ -1,4 +1,26 @@
 require('dotenv').config();
+
+const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
+const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+
+if (!emailUser) {
+  console.error("❌ Startup Error: EMAIL_USER or EMAIL environment variable is missing.");
+  process.exit(1);
+}
+if (!emailPass) {
+  console.error("❌ Startup Error: EMAIL_PASS or EMAIL_PASSWORD environment variable is missing.");
+  process.exit(1);
+}
+
+const { verifySMTP } = require('./services/emailService');
+verifySMTP().then(success => {
+  if (!success) {
+    console.error("❌ SMTP Verification Failed on Startup. Exiting...");
+    process.exit(1);
+  }
+  console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
+});
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -412,26 +434,9 @@ app.get('/test', (req, res) => {
 // Test Email Route for Gmail OTP Verification verification
 app.get('/test-email', async (req, res) => {
   try {
-    const nodemailer = require('nodemailer');
-    const emailUser = process.env.EMAIL || process.env.EMAIL_USER;
-    let emailPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
-    if (emailPass) {
-      emailPass = emailPass.trim().replace(/\s+/g, '');
-    }
+    const { transporter } = require('./services/emailService');
+    const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
     const recipient = req.query.to || "yourpersonalemail@gmail.com";
-
-    if (!emailUser || !emailPass) {
-      return res.status(400).send("SMTP credentials (EMAIL and EMAIL_PASSWORD) not configured in .env");
-    }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      family: 4,
-      auth: {
-        user: emailUser,
-        pass: emailPass
-      }
-    });
 
     await transporter.sendMail({
       from: `"Infinity AI" <${emailUser}>`,

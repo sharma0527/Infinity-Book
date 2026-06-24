@@ -15,6 +15,7 @@ import { API_URL } from "./config/api";
 // Expose the resolved API URL dynamically to the window object so the Chatbot iframe can read it
 const rawApiUrl = API_URL;
 window.VITE_API_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+window.GOOGLE_CLIENT_ID = "846733221975-43pt1k3ch4oah8m60q1jcrgrdki3vgrr.apps.googleusercontent.com";
 
 // Extract the base socket URL dynamically from saved settings or default
 const getSocketUrl = () => {
