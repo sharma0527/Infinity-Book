@@ -841,6 +841,12 @@
         let projectsDb = JSON.parse(localStorage.getItem('infinity_projects')) || [];
         let activeProject = null;
 
+        // Migrate old backend URLs in localStorage
+        const savedBackendUrl = localStorage.getItem('infinity_backend_url');
+        if (savedBackendUrl && savedBackendUrl.includes('infinity-book.onrender.com') && !savedBackendUrl.includes('infinity-book-1.onrender.com')) {
+            localStorage.setItem('infinity_backend_url', savedBackendUrl.replace('infinity-book.onrender.com', 'infinity-book-1.onrender.com'));
+        }
+
         // Dynamic API URL definition with customizable user settings
         let parentApiUrl = null;
         try {

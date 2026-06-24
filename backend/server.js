@@ -27,26 +27,28 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
 
 const app = express();
-const allowedOrigins = [
-  "https://8e780c41.infinity-book.pages.dev",
-  "https://infinity-book.pages.dev",
-  "http://localhost:5173",
-  "http://localhost:3000"
-];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (Postman, curl, mobile apps)
       if (!origin) return callback(null, true);
-
-      // Allow all origins for the dynamic Cloudflare Pages preview URLs to work seamlessly
-      return callback(null, true);
+      // Allow localhost and any pages.dev subdomains
+      const allowedPatterns = [
+        /^http:\/\/localhost:\d+$/,
+        /^https:\/\/.*\.infinity-book\.pages\.dev$/,
+        /^https:\/\/infinity-book\.pages\.dev$/
+      ];
+      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+      if (isAllowed) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -59,6 +61,7 @@ app.use(
     ]
   })
 );
+app.options('*any', cors());
 
 app.use(express.json());
 
@@ -71,11 +74,7 @@ const io = new Server(server, {
 });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI).then(() => {
-  console.log('✅ MongoDB Connected');
-}).catch((err) => {
-  console.error('❌ MongoDB connection error:', err);
-});
+connectDB();
 
 mongoose.connection.on("connected", () => {
   console.log("✅ MongoDB Reconnected");
@@ -464,6 +463,13 @@ app.get('*any', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+console.log("Checking ENV");
+console.log("MONGO_URI:", process.env.MONGO_URI ? "FOUND" : "MISSING");
+console.log("EMAIL_USER:", (process.env.EMAIL_USER || process.env.EMAIL) ? "FOUND" : "MISSING");
+console.log("EMAIL_PASS:", (process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD) ? "FOUND" : "MISSING");
+console.log("JWT_SECRET:", process.env.JWT_SECRET ? "FOUND" : "MISSING");
+console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID ? "FOUND" : "MISSING");
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
