@@ -34,21 +34,31 @@ let transporter = null;
 async function getTransporter() {
     if (transporter) return transporter;
 
-    const emailUser = process.env.EMAIL || process.env.EMAIL_USER;
-    let emailPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+    const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
+    let emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
     if (emailPass) {
         emailPass = emailPass.trim().replace(/\s+/g, '');
     }
 
     if (emailUser && emailPass) {
         transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
             family: 4,
             auth: {
                 user: emailUser,
                 pass: emailPass
             }
         });
+        try {
+            await transporter.verify();
+            console.log("SMTP Connected Successfully");
+        } catch (err) {
+            console.error("SMTP Connection Verification Failed:", err);
+            transporter = null;
+            throw err;
+        }
     } else {
         console.log('[Email] SMTP credentials not configured. Generating transient Ethereal SMTP test credentials...');
         try {
@@ -62,50 +72,64 @@ async function getTransporter() {
                     pass: testAccount.pass
                 }
             });
+            await transporter.verify();
+            console.log("SMTP Connected Successfully (Ethereal)");
         } catch (err) {
-            console.error('[Email] Failed to create Ethereal test account:', err.message);
+            console.error('[Email] Failed to create Ethereal test account or verify:', err.message);
+            transporter = null;
+            throw err;
         }
     }
     return transporter;
 }
 
-// OPTIMIZED BACKGROUND EMAIL SENDING
-function sendOtpEmail(email, otp) {
-    getTransporter().then(activeTransporter => {
-        if (activeTransporter) {
-            const mailOptions = {
-                from: `"Infinity AI" <${process.env.EMAIL || process.env.EMAIL_USER || 'no-reply@infinity.book'}>`,
-                to: email,
-                subject: 'Your Infinity AI Verification Code',
-                text: `Hello!\n\nYour 6-digit verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nBest regards,\nInfinity AI Team`,
-                html: `
-                    <div style="font-family: sans-serif; padding: 20px; color: #1e293b; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-                        <div style="text-align: center; margin-bottom: 20px;">
-                            <span style="font-size: 32px; font-weight: bold; color: #10a37f;">∞</span>
-                            <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Infinity AI Verification</h2>
-                        </div>
-                        <p style="font-size: 14px; line-height: 1.5; color: #475569;">Hello!</p>
-                        <p style="font-size: 14px; line-height: 1.5; color: #475569;">To proceed with your Infinity Book verification, enter the following 6-digit code:</p>
-                        <div style="text-align: center; margin: 24px 0;">
-                            <span style="font-size: 32px; font-weight: bold; color: #0f172a; letter-spacing: 6px; background-color: #f1f5f9; padding: 12px 24px; border-radius: 8px; display: inline-block;">${otp}</span>
-                        </div>
-                        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">This code will expire in 5 minutes. If you did not request this, you can safely ignore this email.</p>
-                    </div>
-                `
-            };
-            activeTransporter.sendMail(mailOptions).then(info => {
-                console.log(`[Email] Verification code successfully sent to: ${email}`);
-                const previewUrl = nodemailer.getTestMessageUrl(info);
-                if (previewUrl) {
-                    console.log(`[Email] View preview at Ethereal: ${previewUrl}`);
-                }
-            }).catch(err => {
-                console.error('[Email] sendMail error:', err.message);
-            });
+// OTP Send Function (Awaited with delivery verification)
+async function sendOtpEmail(email, otp) {
+    try {
+        const activeTransporter = await getTransporter();
+        if (!activeTransporter) {
+            console.error('[Email] Transporter could not be initialized.');
+            return false;
         }
-    }).catch(err => {
-        console.error('[Email] transporter error:', err.message);
-    });
+
+        const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
+        console.log("OTP Request Received");
+        console.log("Sending OTP To:", email);
+        console.log("SMTP User:", emailUser);
+
+        const mailOptions = {
+            from: `"Infinity AI" <${emailUser || 'no-reply@infinity.book'}>`,
+            to: email,
+            subject: 'Your Infinity AI Verification Code',
+            text: `Hello!\n\nYour 6-digit verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nBest regards,\nInfinity AI Team`,
+            html: `
+                <div style="font-family: sans-serif; padding: 20px; color: #1e293b; max-width: 500px; margin: auto; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <span style="font-size: 32px; font-weight: bold; color: #10a37f;">∞</span>
+                        <h2 style="margin: 0; font-size: 20px; font-weight: 700;">Infinity AI Verification</h2>
+                    </div>
+                    <p style="font-size: 14px; line-height: 1.5; color: #475569;">Hello!</p>
+                    <p style="font-size: 14px; line-height: 1.5; color: #475569;">To proceed with your Infinity Book verification, enter the following 6-digit code:</p>
+                    <div style="text-align: center; margin: 24px 0;">
+                        <span style="font-size: 32px; font-weight: bold; color: #0f172a; letter-spacing: 6px; background-color: #f1f5f9; padding: 12px 24px; border-radius: 8px; display: inline-block;">${otp}</span>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">This code will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
+                </div>
+            `
+        };
+
+        const info = await activeTransporter.sendMail(mailOptions);
+        console.log(`[Email] Verification code successfully sent to: ${email}`);
+        console.log("Email Sent:", info.messageId);
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        if (previewUrl) {
+            console.log(`[Email] View preview at Ethereal: ${previewUrl}`);
+        }
+        return true;
+    } catch (err) {
+        console.error('[Email] sendMail error:', err);
+        return false;
+    }
 }
 
 // 1. SEND OTP (Signup/Spam protection/Resend Rate Limiter)
@@ -148,7 +172,7 @@ router.post('/send-otp', async (req, res) => {
         
         await Otp.findOneAndUpdate(
             { email: normalizedEmail },
-            { otp: hashedOtp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+            { otp: hashedOtp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
             { upsert: true, new: true }
         );
 
@@ -157,10 +181,12 @@ router.post('/send-otp', async (req, res) => {
         console.log(`Verification Code: ${otp}`);
         console.log(`========================================\n`);
 
-        // Trigger email delivery in the background asynchronously
-        sendOtpEmail(normalizedEmail, otp);
+        // Trigger email delivery and await result
+        const sent = await sendOtpEmail(normalizedEmail, otp);
+        if (!sent) {
+            return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+        }
 
-        // Immediate HTTP response (under 100ms)
         res.json({ success: true, message: 'Verification code sent successfully.' });
     } catch (err) {
         console.error('[OTP Send Error]:', err);
@@ -352,7 +378,7 @@ router.post('/forgot-password/send-otp', async (req, res) => {
         
         await Otp.findOneAndUpdate(
             { email: normalizedEmail },
-            { otp: hashedOtp, expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+            { otp: hashedOtp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
             { upsert: true, new: true }
         );
 
@@ -361,8 +387,11 @@ router.post('/forgot-password/send-otp', async (req, res) => {
         console.log(`Verification Code: ${otp}`);
         console.log(`========================================\n`);
 
-        // Send email asynchronously in background
-        sendOtpEmail(normalizedEmail, otp);
+        // Trigger email delivery and await result
+        const sent = await sendOtpEmail(normalizedEmail, otp);
+        if (!sent) {
+            return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+        }
 
         res.json({ success: true, message: 'Verification code sent successfully.' });
     } catch (err) {
