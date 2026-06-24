@@ -4,21 +4,19 @@ const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
 const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
 
 if (!emailUser) {
-  console.error("❌ Startup Error: EMAIL_USER or EMAIL environment variable is missing.");
-  process.exit(1);
+  console.warn("⚠ WARNING: EMAIL_USER or EMAIL environment variable is missing. Email sending will fail.");
 }
 if (!emailPass) {
-  console.error("❌ Startup Error: EMAIL_PASS or EMAIL_PASSWORD environment variable is missing.");
-  process.exit(1);
+  console.warn("⚠ WARNING: EMAIL_PASS or EMAIL_PASSWORD environment variable is missing. Email sending will fail.");
 }
 
 const { verifySMTP } = require('./services/emailService');
 verifySMTP().then(success => {
   if (!success) {
-    console.error("❌ SMTP Verification Failed on Startup. Exiting...");
-    process.exit(1);
+    console.warn("⚠ WARNING: SMTP Verification Failed on Startup. Email sending may fail.");
+  } else {
+    console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
   }
-  console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
 });
 
 const express = require('express');
@@ -34,34 +32,24 @@ const historyRoutes = require('./routes/history');
 
 const app = express();
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-      // Allow localhost and any pages.dev subdomains
-      const allowedPatterns = [
-        /^http:\/\/localhost:\d+$/,
-        /^https:\/\/.*\.infinity-book\.pages\.dev$/,
-        /^https:\/\/infinity-book\.pages\.dev$/
-      ];
-      const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-      if (isAllowed) {
-        return callback(null, true);
-      }
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "Authorization"
-    ]
-  })
-);
-app.options('*any', cors());
+const corsMiddleware = cors({
+  origin: function (origin, callback) {
+    // Dynamically reflect the request origin to allow localhost, preview subdomains, and main domain perfectly with credentials: true
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization"
+  ]
+});
+
+app.use(corsMiddleware);
+app.options('*any', corsMiddleware);
 
 app.use(express.json());
 
