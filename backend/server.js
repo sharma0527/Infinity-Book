@@ -426,6 +426,7 @@ app.get('/test-email', async (req, res) => {
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
+      family: 4,
       auth: {
         user: emailUser,
         pass: emailPass

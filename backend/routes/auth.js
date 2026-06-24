@@ -43,6 +43,7 @@ async function getTransporter() {
     if (emailUser && emailPass) {
         transporter = nodemailer.createTransport({
             service: 'gmail',
+            family: 4,
             auth: {
                 user: emailUser,
                 pass: emailPass
