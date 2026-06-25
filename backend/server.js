@@ -476,12 +476,12 @@ async function startServer() {
     }
     console.log("✅ MongoDB Connected Successfully.");
 
-    console.log("Verifying SMTP connection...");
     const smtpSuccess = await verifySMTP();
     if (!smtpSuccess) {
-      throw new Error("SMTP Verification Failed. Email sending config is incorrect.");
+      console.warn("⚠ WARNING: SMTP connection failed. Email sending is disabled/unavailable, but server will continue to boot.");
+    } else {
+      console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
     }
-    console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
 
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
