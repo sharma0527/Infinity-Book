@@ -628,12 +628,6 @@
                 <p class="text-xs text-textSecondary mt-0.5" id="auth-modal-subtitle">Journaling & Collaboration Workspace</p>
             </div>
 
-            <!-- Tab Switcher -->
-            <div class="flex border-b border-white/10 mb-5" id="auth-tab-container">
-                <button onclick="switchAuthMode('login')" id="tab-login" class="auth-tab-btn active flex-1 text-center">Login</button>
-                <button onclick="switchAuthMode('signup')" id="tab-signup" class="auth-tab-btn flex-1 text-center">Sign Up</button>
-            </div>
-
             <!-- Error Banner -->
             <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg mb-4 text-center"></div>
             
@@ -646,98 +640,141 @@
                 <!-- LOGIN FORM -->
                 <div id="form-login" class="space-y-3">
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email Address</label>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
                         <input type="email" id="login-email" placeholder="name@gmail.com" class="auth-input" />
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
                             <label class="text-[10px] font-semibold text-textSecondary block uppercase tracking-wider">Password</label>
-                            <button onclick="switchAuthMode('forgot')" class="text-[10px] text-accent hover:underline font-semibold">Forgot Password?</button>
+                            <button type="button" onclick="switchAuthMode('forgot')" class="text-[10px] text-accent hover:underline font-semibold">Forgot Password?</button>
                         </div>
-                        <input type="password" id="login-password" placeholder="••••••••" class="auth-input" />
+                        <div class="relative">
+                            <input type="password" id="login-password" placeholder="••••••••" class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="login-password-eye"></i>
+                            </button>
+                        </div>
                     </div>
-                    <button onclick="handlePasswordLogin()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20 mt-2">
-                        Login
+                    <button id="login-btn" onclick="handlePasswordLogin()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="login-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="login-btn-text">Login</span>
                     </button>
+                    <p class="text-center text-xs text-textSecondary mt-4">
+                        Don't have an account? <button type="button" onclick="switchAuthMode('signup')" class="text-accent hover:underline font-semibold">Sign Up</button>
+                    </p>
                 </div>
 
-                <!-- SIGNUP FORM (Name + Email Stage) -->
-                <div id="form-signup-step1" class="space-y-3 hidden">
+                <!-- SIGNUP FORM -->
+                <div id="form-signup" class="space-y-3 hidden">
                     <div>
                         <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Full Name</label>
                         <input type="text" id="signup-name" placeholder="John Doe" class="auth-input" />
                     </div>
                     <div>
                         <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
+                        <input type="email" id="signup-email" placeholder="name@gmail.com" class="auth-input" />
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Password</label>
                         <div class="relative">
-                            <input type="email" id="signup-email" placeholder="username" class="auth-input pr-24" />
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-textSecondary font-semibold">@gmail.com</span>
+                            <input type="password" id="signup-password" oninput="checkSignupPasswordStrength(this.value)" placeholder="••••••••" class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('signup-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="signup-password-eye"></i>
+                            </button>
+                        </div>
+                        <div id="signup-password-feedback" class="text-[10px] mt-1 text-red-400 hidden"></div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm Password</label>
+                        <div class="relative">
+                            <input type="password" id="signup-confirm-password" placeholder="••••••••" class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('signup-confirm-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="signup-confirm-password-eye"></i>
+                            </button>
                         </div>
                     </div>
-                    <button id="signup-send-otp-btn" onclick="handleSendOtp('signup')" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20 mt-2">
-                        Send Verification Code
+                    <button id="signup-btn" onclick="handleSignupSubmit()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="signup-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="signup-btn-text">Create Account</span>
+                    </button>
+                    <p class="text-center text-xs text-textSecondary mt-4">
+                        Already have an account? <button type="button" onclick="switchAuthMode('login')" class="text-accent hover:underline font-semibold">Login</button>
+                    </p>
+                </div>
+
+                <!-- FORGOT PASSWORD FORM -->
+                <div id="form-forgot" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset code.</p>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@gmail.com" class="auth-input" />
+                    </div>
+                    <button id="forgot-btn" onclick="handleForgotSubmit()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="forgot-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="forgot-btn-text">Send Reset Code</span>
+                    </button>
+                    <button type="button" onclick="switchAuthMode('login')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Back to Login
                     </button>
                 </div>
 
-                <!-- SIGNUP FORM (OTP + Password Stage) -->
-                <div id="form-signup-step2" class="space-y-3 hidden">
+                <!-- OTP VERIFICATION - SIGNUP -->
+                <div id="form-otp-signup" class="space-y-3 hidden">
                     <p class="text-xs text-textSecondary text-center mb-2">
-                        Verification code sent to <span id="signup-sent-email" class="text-white font-semibold"></span>
+                        Verification code sent to <span id="otp-signup-sent-email" class="text-white font-semibold"></span>
                     </p>
                     <div>
                         <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit Code</label>
                         <input type="text" id="signup-otp" placeholder="••••••" class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
                     </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Create Password</label>
-                        <input type="password" id="signup-password" placeholder="••••••••" class="auth-input" />
-                    </div>
-                    <button onclick="completeSignup()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20">
-                        Verify &amp; Create Account
+                    <button id="otp-signup-btn" onclick="completeSignup()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
+                        <span id="otp-signup-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="otp-signup-btn-text">Verify &amp; Create Account</span>
                     </button>
                     <p class="text-xs text-textSecondary text-center mt-3" id="signup-resend-container">
-                        Didn't receive code? <button onclick="resendOtp('signup')" id="signup-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
+                        Didn't receive code? <button type="button" onclick="resendOtp('signup')" id="signup-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
                     </p>
-                    <button onclick="goBackToStep1('signup')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                    <button type="button" onclick="switchAuthMode('signup')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
                         ← Change Email
                     </button>
                 </div>
 
-                <!-- FORGOT PASSWORD FORM (Email Stage) -->
-                <div id="form-forgot-step1" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset code.</p>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email Address</label>
-                        <input type="email" id="forgot-email" placeholder="name@gmail.com" class="auth-input" />
-                    </div>
-                    <button id="forgot-send-otp-btn" onclick="handleSendOtp('forgot')" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20 mt-2">
-                        Send Verification Code
-                    </button>
-                    <button onclick="switchAuthMode('login')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Back to Login
-                    </button>
-                </div>
-
-                <!-- FORGOT PASSWORD FORM (OTP + Reset Stage) -->
-                <div id="form-forgot-step2" class="space-y-3 hidden">
+                <!-- OTP VERIFICATION & RESET - FORGOT PASSWORD -->
+                <div id="form-otp-forgot" class="space-y-3 hidden">
                     <p class="text-xs text-textSecondary text-center mb-2">
-                        Reset code sent to <span id="forgot-sent-email" class="text-white font-semibold"></span>
+                        Reset code sent to <span id="otp-forgot-sent-email" class="text-white font-semibold"></span>
                     </p>
                     <div>
                         <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit Code</label>
                         <input type="text" id="forgot-otp" placeholder="••••••" class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
                     </div>
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">New Password</label>
-                        <input type="password" id="forgot-password" placeholder="••••••••" class="auth-input" />
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Create New Password</label>
+                        <div class="relative">
+                            <input type="password" id="forgot-password" oninput="checkForgotPasswordStrength(this.value)" placeholder="••••••••" class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('forgot-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="forgot-password-eye"></i>
+                            </button>
+                        </div>
+                        <div id="forgot-password-feedback" class="text-[10px] mt-1 text-red-400 hidden"></div>
                     </div>
-                    <button onclick="completeReset()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-colors shadow-lg shadow-accent/20">
-                        Reset Password &amp; Login
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm New Password</label>
+                        <div class="relative">
+                            <input type="password" id="forgot-confirm-password" placeholder="••••••••" class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('forgot-confirm-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="forgot-confirm-password-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="otp-forgot-btn" onclick="completeReset()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
+                        <span id="otp-forgot-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="otp-forgot-btn-text">Reset Password &amp; Login</span>
                     </button>
                     <p class="text-xs text-textSecondary text-center mt-3" id="forgot-resend-container">
-                        Didn't receive code? <button onclick="resendOtp('forgot')" id="forgot-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
+                        Didn't receive code? <button type="button" onclick="resendOtp('forgot')" id="forgot-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
                     </p>
-                    <button onclick="goBackToStep1('forgot')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                    <button type="button" onclick="switchAuthMode('forgot')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
                         ← Change Email
                     </button>
                 </div>
@@ -746,12 +783,6 @@
 
             <!-- Hidden Custom Backend URL field to satisfy existing codebase structure -->
             <input type="hidden" id="auth-backend-url" />
-
-            <!-- Google Sign-In Integrations -->
-            <div id="google-signin-container" style="display: none !important;" class="hidden mt-5 pt-5 border-t border-white/10 flex flex-col items-center">
-                <p class="text-[10px] font-semibold text-textSecondary uppercase tracking-wider mb-3">Or continue with</p>
-                <div id="google-login-btn"></div>
-            </div>
             
             <p class="text-center text-[10px] text-textSecondary mt-4">By continuing, you agree to Infinity AI's terms.</p>
         </div>
@@ -977,8 +1008,6 @@
                         ? 'http://localhost:5000/api' 
                         : 'https://infinity-book-1.onrender.com/api');
             }
-            
-            initGoogleSignIn();
         };
 
         // Profile Card Modal
@@ -1088,9 +1117,98 @@
 
         let authTempName = '';
         let authTempEmail = '';
+        let authTempPassword = '';
         let countdownTimer = null;
         let cooldownSeconds = 0;
-        let googleInitialized = false;
+
+        function togglePasswordVisibility(id) {
+            const input = document.getElementById(id);
+            const eyeIcon = document.getElementById(id + '-eye');
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (eyeIcon) {
+                    eyeIcon.setAttribute('data-lucide', 'eye-off');
+                }
+            } else {
+                input.type = 'password';
+                if (eyeIcon) {
+                    eyeIcon.setAttribute('data-lucide', 'eye');
+                }
+            }
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        function setButtonLoading(btnId, isLoading, text) {
+            const btn = document.getElementById(btnId);
+            const spinner = document.getElementById(btnId + '-spinner');
+            const textSpan = document.getElementById(btnId + '-text');
+            if (btn) {
+                btn.disabled = isLoading;
+                if (isLoading) {
+                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    if (spinner) spinner.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    if (spinner) spinner.classList.add('hidden');
+                }
+            }
+            if (textSpan && text) {
+                textSpan.textContent = text;
+            }
+        }
+
+        function validatePasswordStrength(password) {
+            if (!password) return { isValid: false, message: 'Password is required.' };
+            if (password.length < 8) return { isValid: false, message: 'Must be at least 8 characters long.' };
+            if (!/[A-Z]/.test(password)) return { isValid: false, message: 'Must contain at least one uppercase letter.' };
+            if (!/[a-z]/.test(password)) return { isValid: false, message: 'Must contain at least one lowercase letter.' };
+            if (!/[0-9]/.test(password)) return { isValid: false, message: 'Must contain at least one number.' };
+            if (!/[^A-Za-z0-9]/.test(password)) return { isValid: false, message: 'Must contain at least one special character.' };
+            return { isValid: true, message: 'Strong password.' };
+        }
+
+        function checkSignupPasswordStrength(val) {
+            const feedback = document.getElementById('signup-password-feedback');
+            if (!val) {
+                feedback.classList.add('hidden');
+                return;
+            }
+            const result = validatePasswordStrength(val);
+            feedback.textContent = result.message;
+            feedback.classList.remove('hidden');
+            if (result.isValid) {
+                feedback.className = 'text-[10px] mt-1 text-accent';
+            } else {
+                feedback.className = 'text-[10px] mt-1 text-red-400';
+            }
+        }
+
+        function checkForgotPasswordStrength(val) {
+            const feedback = document.getElementById('forgot-password-feedback');
+            if (!val) {
+                feedback.classList.add('hidden');
+                return;
+            }
+            const result = validatePasswordStrength(val);
+            feedback.textContent = result.message;
+            feedback.classList.remove('hidden');
+            if (result.isValid) {
+                feedback.className = 'text-[10px] mt-1 text-accent';
+            } else {
+                feedback.className = 'text-[10px] mt-1 text-red-400';
+            }
+        }
+
+        function isValidGmail(email) {
+            if (!email) return false;
+            const parts = email.split('@');
+            if (parts.length !== 2) return false;
+            if (parts[1].toLowerCase() !== 'gmail.com') return false;
+            if (parts[0].includes('+')) return false;
+            return true;
+        }
 
         function switchAuthMode(mode) {
             const errorDiv = document.getElementById('auth-error');
@@ -1098,37 +1216,43 @@
             errorDiv.classList.add('hidden');
             successDiv.classList.add('hidden');
 
-            const tabContainer = document.getElementById('auth-tab-container');
-            const tabLogin = document.getElementById('tab-login');
-            const tabSignup = document.getElementById('tab-signup');
-            const googleContainer = document.getElementById('google-signin-container');
-
+            const modalTitle = document.getElementById('auth-modal-title');
+            const modalSubtitle = document.getElementById('auth-modal-subtitle');
+            
             // Hide all form panels
             document.getElementById('form-login').classList.add('hidden');
-            document.getElementById('form-signup-step1').classList.add('hidden');
-            document.getElementById('form-signup-step2').classList.add('hidden');
-            document.getElementById('form-forgot-step1').classList.add('hidden');
-            document.getElementById('form-forgot-step2').classList.add('hidden');
-
-            // Reset tab styles
-            tabLogin.classList.remove('active');
-            tabSignup.classList.remove('active');
-            tabContainer.classList.remove('hidden');
-            googleContainer.classList.add('hidden');
+            document.getElementById('form-signup').classList.add('hidden');
+            document.getElementById('form-forgot').classList.add('hidden');
+            document.getElementById('form-otp-signup').classList.add('hidden');
+            document.getElementById('form-otp-forgot').classList.add('hidden');
 
             if (mode === 'login') {
-                tabLogin.classList.add('active');
+                modalTitle.textContent = 'Login';
+                modalSubtitle.textContent = 'Access your Infinity AI workspace';
                 document.getElementById('form-login').classList.remove('hidden');
                 setTimeout(() => document.getElementById('login-email').focus(), 50);
             } else if (mode === 'signup') {
-                tabSignup.classList.add('active');
-                document.getElementById('form-signup-step1').classList.remove('hidden');
+                modalTitle.textContent = 'Sign Up';
+                modalSubtitle.textContent = 'Create your collaborative canvas account';
+                document.getElementById('form-signup').classList.remove('hidden');
                 setTimeout(() => document.getElementById('signup-name').focus(), 50);
             } else if (mode === 'forgot') {
-                tabContainer.classList.add('hidden');
-                googleContainer.classList.add('hidden');
-                document.getElementById('form-forgot-step1').classList.remove('hidden');
+                modalTitle.textContent = 'Forgot Password';
+                modalSubtitle.textContent = 'Reset your account credentials';
+                document.getElementById('form-forgot').classList.remove('hidden');
                 setTimeout(() => document.getElementById('forgot-email').focus(), 50);
+            } else if (mode === 'otp-signup') {
+                modalTitle.textContent = 'OTP Verification';
+                modalSubtitle.textContent = 'Confirm your Gmail address';
+                document.getElementById('form-otp-signup').classList.remove('hidden');
+                document.getElementById('otp-signup-sent-email').textContent = authTempEmail;
+                setTimeout(() => document.getElementById('signup-otp').focus(), 50);
+            } else if (mode === 'otp-forgot') {
+                modalTitle.textContent = 'Reset Password';
+                modalSubtitle.textContent = 'Verify OTP and set new password';
+                document.getElementById('form-otp-forgot').classList.remove('hidden');
+                document.getElementById('otp-forgot-sent-email').textContent = authTempEmail;
+                setTimeout(() => document.getElementById('forgot-otp').focus(), 50);
             }
         }
 
@@ -1158,101 +1282,142 @@
         }
 
         function resendOtp(type) {
-            handleSendOtp(type, true);
-        }
-
-        async function handleSendOtp(type, isResend = false) {
             const errorDiv = document.getElementById('auth-error');
             const successDiv = document.getElementById('auth-success');
             errorDiv.classList.add('hidden');
             successDiv.classList.add('hidden');
 
-            let email = '';
-            let name = '';
-
-            if (type === 'signup') {
-                name = document.getElementById('signup-name').value.trim();
-                email = document.getElementById('signup-email').value.trim();
-                if (!isResend && (!name || name.length < 2)) {
-                    showError('Please enter your full name (at least 2 characters).');
-                    return;
-                }
-                if (!email) {
-                    showError('Please enter your Gmail address.');
-                    return;
-                }
-                if (!email.includes('@')) {
-                    email = email + '@gmail.com';
-                }
-                const parts = email.split('@');
-                if (parts.length !== 2 || parts[1].toLowerCase() !== 'gmail.com') {
-                    showError('Only original Gmail addresses (@gmail.com) are accepted.');
-                    return;
-                }
-            } else {
-                email = document.getElementById('forgot-email').value.trim();
-                if (!email) {
-                    showError('Please enter your Gmail address.');
-                    return;
-                }
-                if (!email.includes('@')) {
-                    email = email + '@gmail.com';
-                }
-                const parts = email.split('@');
-                if (parts.length !== 2 || parts[1].toLowerCase() !== 'gmail.com') {
-                    showError('Only original Gmail addresses (@gmail.com) are accepted.');
-                    return;
-                }
-            }
-
-            authTempName = name || authTempName;
-            authTempEmail = email.toLowerCase();
-
-            // Optimistic UI Transition: Immediately go to Step 2
-            document.getElementById(`${type}-sent-email`).textContent = authTempEmail;
-            document.getElementById(`form-${type}-step1`).classList.add('hidden');
-            document.getElementById(`form-${type}-step2`).classList.remove('hidden');
-
-            const otpInput = document.getElementById(`${type}-otp`);
-            if (otpInput) {
-                setTimeout(() => otpInput.focus(), 100);
-            }
-
+            showSuccess('Resending verification code...');
             startResendCountdown(type);
-            showSuccess('Sending verification code...');
 
             const url = type === 'signup' ? `${API_URL}/auth/send-otp` : `${API_URL}/auth/forgot-password/send-otp`;
             const payload = type === 'signup' ? { email: authTempEmail, requestType: 'signup' } : { email: authTempEmail };
 
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(response => response.json().then(data => {
+                if (!response.ok) {
+                    showError(data.error || 'Failed to resend verification code.');
+                } else {
+                    showSuccess(data.message || 'Verification code resent successfully.');
+                }
+            })).catch(() => {
+                showError('Network error. Please check your connection.');
+            });
+        }
+
+        async function handleSignupSubmit() {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            const name = document.getElementById('signup-name').value.trim();
+            let email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+            if (!name || name.length < 2) {
+                showError('Please enter your full name (at least 2 characters).');
+                return;
+            }
+            if (!email) {
+                showError('Please enter your Gmail address.');
+                return;
+            }
+            if (!email.includes('@')) {
+                email = email + '@gmail.com';
+            }
+            if (!isValidGmail(email)) {
+                showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
+                return;
+            }
+            
+            const passVal = validatePasswordStrength(password);
+            if (!passVal.isValid) {
+                showError('Password rules: ' + passVal.message);
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Passwords do not match.');
+                return;
+            }
+
+            authTempName = name;
+            authTempEmail = email.toLowerCase();
+            authTempPassword = password;
+
+            setButtonLoading('signup-btn', true, 'Sending Code...');
+            showSuccess('Sending verification code...');
+
             try {
-                const response = await fetch(url, {
+                const response = await fetch(`${API_URL}/auth/send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ email: authTempEmail, requestType: 'signup' })
                 });
                 const data = await response.json();
                 if (!response.ok) {
                     showError(data.error || 'Failed to send verification code.');
-                    goBackToStep1(type);
-                    clearInterval(countdownTimer);
+                    setButtonLoading('signup-btn', false, 'Create Account');
                 } else {
                     showSuccess(data.message || 'Verification code sent successfully.');
+                    setButtonLoading('signup-btn', false, 'Create Account');
+                    switchAuthMode('otp-signup');
+                    startResendCountdown('signup');
                 }
             } catch (err) {
                 showError('Network error. Please check your connection.');
-                goBackToStep1(type);
-                clearInterval(countdownTimer);
+                setButtonLoading('signup-btn', false, 'Create Account');
             }
         }
 
-        function goBackToStep1(type) {
-            document.getElementById(`form-${type}-step2`).classList.add('hidden');
-            document.getElementById(`form-${type}-step1`).classList.remove('hidden');
-            document.getElementById(`${type}-otp`).value = '';
-            if (type === 'signup') {
-                document.getElementById('signup-password').value = '';
-            } else {
-                document.getElementById('forgot-password').value = '';
+        async function handleForgotSubmit() {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            let email = document.getElementById('forgot-email').value.trim();
+            if (!email) {
+                showError('Please enter your Gmail address.');
+                return;
+            }
+            if (!email.includes('@')) {
+                email = email + '@gmail.com';
+            }
+            if (!isValidGmail(email)) {
+                showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
+                return;
+            }
+
+            authTempEmail = email.toLowerCase();
+
+            setButtonLoading('forgot-btn', true, 'Sending Code...');
+            showSuccess('Sending verification code...');
+
+            try {
+                const response = await fetch(`${API_URL}/auth/forgot-password/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: authTempEmail })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'Failed to send verification code.');
+                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
+                } else {
+                    showSuccess(data.message || 'Verification code sent successfully.');
+                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
+                    switchAuthMode('otp-forgot');
+                    startResendCountdown('forgot');
+                }
+            } catch (err) {
+                showError('Network error. Please check your connection.');
+                setButtonLoading('forgot-btn', false, 'Send Reset Code');
             }
         }
 
@@ -1261,12 +1426,14 @@
             const password = document.getElementById('login-password').value;
 
             if (!email || !password) {
-                showError('Please enter both email and password.');
+                showError('Please enter both Gmail address and password.');
                 return;
             }
 
+            setButtonLoading('login-btn', true, 'Logging in...');
+            showSuccess('Logging in...');
+
             try {
-                showSuccess('Logging in...');
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1275,32 +1442,31 @@
 
                 const data = await response.json();
                 if (!response.ok) {
-                    showError(data.error || 'Login failed.');
+                    showError(data.error || 'Incorrect Gmail address or password.');
+                    setButtonLoading('login-btn', false, 'Login');
                     return;
                 }
 
                 saveSessionAndLogin(data);
+                setButtonLoading('login-btn', false, 'Login');
             } catch (err) {
                 showError('Network error. Make sure the backend is running.');
+                setButtonLoading('login-btn', false, 'Login');
             }
         }
 
         async function completeSignup() {
             const otp = document.getElementById('signup-otp').value.trim();
-            const password = document.getElementById('signup-password').value;
 
-            if (!otp || !password) {
-                showError('Please enter both verification code and password.');
+            if (!otp) {
+                showError('Please enter verification code.');
                 return;
             }
 
-            if (password.length < 6) {
-                showError('Password must be at least 6 characters.');
-                return;
-            }
+            setButtonLoading('otp-signup-btn', true, 'Creating Account...');
+            showSuccess('Creating account...');
 
             try {
-                showSuccess('Creating account...');
                 const response = await fetch(`${API_URL}/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1308,38 +1474,50 @@
                         name: authTempName,
                         email: authTempEmail,
                         otp,
-                        password
+                        password: authTempPassword
                     })
                 });
 
                 const data = await response.json();
                 if (!response.ok) {
-                    showError(data.error || 'Signup failed.');
+                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
+                    setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
                     return;
                 }
 
                 saveSessionAndLogin(data, true);
+                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
             } catch (err) {
                 showError('Network error during account creation.');
+                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
             }
         }
 
         async function completeReset() {
             const otp = document.getElementById('forgot-otp').value.trim();
             const newPassword = document.getElementById('forgot-password').value;
+            const confirmPassword = document.getElementById('forgot-confirm-password').value;
 
-            if (!otp || !newPassword) {
-                showError('Please enter both verification code and new password.');
+            if (!otp || !newPassword || !confirmPassword) {
+                showError('All fields are required.');
                 return;
             }
 
-            if (newPassword.length < 6) {
-                showError('Password must be at least 6 characters.');
+            const passVal = validatePasswordStrength(newPassword);
+            if (!passVal.isValid) {
+                showError('New password rules: ' + passVal.message);
                 return;
             }
+
+            if (newPassword !== confirmPassword) {
+                showError('Passwords do not match.');
+                return;
+            }
+
+            setButtonLoading('otp-forgot-btn', true, 'Resetting Password...');
+            showSuccess('Resetting password...');
 
             try {
-                showSuccess('Resetting password...');
                 const response = await fetch(`${API_URL}/auth/forgot-password/reset`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1352,13 +1530,16 @@
 
                 const data = await response.json();
                 if (!response.ok) {
-                    showError(data.error || 'Reset failed.');
+                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
+                    setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
                     return;
                 }
 
                 saveSessionAndLogin(data);
+                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
             } catch (err) {
                 showError('Network error during password reset.');
+                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
             }
         }
 
@@ -1389,7 +1570,7 @@
             syncHistory();
 
             if (isSignup) {
-                showSuccess("You have successfully signed up and logged in to Infinity AI. Welcome to Infinity AI!");
+                showSuccess("Congratulations!\nYour account has been created successfully.\nWelcome to Infinity AI.");
                 setTimeout(() => {
                     closeModal('auth-modal');
                     if (window.parent && window.parent !== window) {
@@ -1397,10 +1578,13 @@
                     }
                 }, 3000);
             } else {
-                closeModal('auth-modal');
-                if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
-                }
+                showSuccess(`Welcome back, ${userName}!\nYou have successfully logged in to Infinity AI.`);
+                setTimeout(() => {
+                    closeModal('auth-modal');
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+                    }
+                }, 2000);
             }
         }
 
@@ -1435,10 +1619,7 @@
             document.getElementById('auth-success').classList.add('hidden');
         }
 
-        function initGoogleSignIn() {
-            // Google Sign-In is disabled/removed
-            return;
-        }
+
 
         window.logout = () => {
             authToken = null;

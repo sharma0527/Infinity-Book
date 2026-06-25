@@ -23,6 +23,8 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const { verifySMTP } = require('./services/emailService');
 
@@ -30,6 +32,18 @@ const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
 
 const app = express();
+
+app.use(helmet({ contentSecurityPolicy: false }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: { error: 'Too many requests from this IP. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/auth', authLimiter);
 
 const allowedOrigins = [
   "http://localhost:5173",

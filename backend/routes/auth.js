@@ -4,8 +4,17 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const User = require('../models/User');
 const Otp = require('../models/Otp');
-const { sendOTP } = require('../services/emailService');
+const { sendOTP, sendWelcomeEmail } = require('../services/emailService');
 const router = express.Router();
+
+function isStrongPassword(password) {
+    if (!password || password.length < 8) return false;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+    return hasUppercase && hasLowercase && hasNumber && hasSpecial;
+}
 
 const disposableDomains = [
     'mailinator.com', '10minutemail.com', 'guerillamail.com', 'yopmail.com',
@@ -116,18 +125,18 @@ router.post('/verify-otp', async (req, res) => {
         
         const storedOtp = await Otp.findOne({ email: normalizedEmail });
         if (!storedOtp) {
-            return res.status(400).json({ error: 'Verification code expired or not found. Please request a new one.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         if (storedOtp.expiresAt < Date.now()) {
             await Otp.deleteOne({ email: normalizedEmail });
-            return res.status(400).json({ error: 'Verification code expired. Please request a new one.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
         const matches = (computedHash === storedOtp.otp);
         if (!matches) {
-            return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         res.json({ success: true, message: 'Verification code verified successfully.' });
@@ -151,16 +160,25 @@ router.post('/signup', async (req, res) => {
 
         const normalizedEmail = email.toLowerCase().trim();
 
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({ error: 'Password does not meet safety criteria (Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character).' });
+        }
+
         // Security check: Verify the OTP again during account creation
         const storedOtp = await Otp.findOne({ email: normalizedEmail });
         if (!storedOtp) {
-            return res.status(400).json({ error: 'Session expired. Please request a code again.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        if (storedOtp.expiresAt < Date.now()) {
+            await Otp.deleteOne({ email: normalizedEmail });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
         const matches = (computedHash === storedOtp.otp);
         if (!matches) {
-            return res.status(400).json({ error: 'OTP verification failed.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         // Clean up OTP record
@@ -173,7 +191,7 @@ router.post('/signup', async (req, res) => {
         }
 
         // Hash Password
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
 
         if (user) {
             user.name = name.trim();
@@ -191,6 +209,11 @@ router.post('/signup', async (req, res) => {
             });
             await user.save();
         }
+
+        // Send Welcome Email
+        sendWelcomeEmail(normalizedEmail, user.name).catch(err => {
+            console.error('[Welcome Email Error]:', err);
+        });
 
         const token = jwt.sign(
             { userId: user._id }, 
@@ -228,13 +251,13 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ email: normalizedEmail });
         
         if (!user || !user.verified) {
-            return res.status(401).json({ error: 'Invalid email or password.' });
+            return res.status(401).json({ error: 'Incorrect Gmail address or password.' });
         }
 
         // Check password matching
         const matches = await bcrypt.compare(password, user.password);
         if (!matches) {
-            return res.status(401).json({ error: 'Invalid email or password.' });
+            return res.status(401).json({ error: 'Incorrect Gmail address or password.' });
         }
 
         user.lastLogin = Date.now();
@@ -332,15 +355,24 @@ router.post('/forgot-password/reset', async (req, res) => {
 
         const normalizedEmail = email.toLowerCase().trim();
 
+        if (!isStrongPassword(newPassword)) {
+            return res.status(400).json({ error: 'Password does not meet safety criteria (Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character).' });
+        }
+
         const storedOtp = await Otp.findOne({ email: normalizedEmail });
         if (!storedOtp) {
-            return res.status(400).json({ error: 'Verification session expired. Please request a code again.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        if (storedOtp.expiresAt < Date.now()) {
+            await Otp.deleteOne({ email: normalizedEmail });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
         const matches = (computedHash === storedOtp.otp);
         if (!matches) {
-            return res.status(400).json({ error: 'Invalid verification code.' });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
         }
 
         // Clean up OTP record
@@ -352,7 +384,7 @@ router.post('/forgot-password/reset', async (req, res) => {
         }
 
         // Hash New Password
-        user.password = await bcrypt.hash(newPassword, 10);
+        user.password = await bcrypt.hash(newPassword, 12);
         user.lastLogin = Date.now();
         await user.save();
 
