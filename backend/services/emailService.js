@@ -79,7 +79,7 @@ async function sendWelcomeEmail(email, name) {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    from: emailUser ? `Infinity AI <${emailUser}>` : "Infinity AI <onboarding@resend.dev>",
+                    from: process.env.SMTP_FROM || (emailUser ? `Infinity AI <${emailUser}>` : "Infinity AI <onboarding@resend.dev>"),
                     to: email,
                     subject: subject,
                     html: html
@@ -127,7 +127,7 @@ async function sendWelcomeEmail(email, name) {
     }
 
     const mailOptions = {
-        from: `"Infinity AI" <${emailUser}>`,
+        from: process.env.SMTP_FROM || `"Infinity AI" <${emailUser}>`,
         to: email,
         subject: subject,
         text: text,
