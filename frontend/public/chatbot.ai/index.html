@@ -644,10 +644,7 @@
                         <input type="email" id="login-email" placeholder="name@gmail.com" class="auth-input" />
                     </div>
                     <div>
-                        <div class="flex justify-between items-center mb-1.5">
-                            <label class="text-[10px] font-semibold text-textSecondary block uppercase tracking-wider">Password</label>
-                            <button type="button" onclick="switchAuthMode('forgot')" class="text-[10px] text-accent hover:underline font-semibold">Forgot Password?</button>
-                        </div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Password</label>
                         <div class="relative">
                             <input type="password" id="login-password" placeholder="••••••••" class="auth-input pr-10" />
                             <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
@@ -700,83 +697,6 @@
                     <p class="text-center text-xs text-textSecondary mt-4">
                         Already have an account? <button type="button" onclick="switchAuthMode('login')" class="text-accent hover:underline font-semibold">Login</button>
                     </p>
-                </div>
-
-                <!-- FORGOT PASSWORD FORM -->
-                <div id="form-forgot" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset code.</p>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
-                        <input type="email" id="forgot-email" placeholder="name@gmail.com" class="auth-input" />
-                    </div>
-                    <button id="forgot-btn" onclick="handleForgotSubmit()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
-                        <span id="forgot-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="forgot-btn-text">Send Reset Code</span>
-                    </button>
-                    <button type="button" onclick="switchAuthMode('login')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Back to Login
-                    </button>
-                </div>
-
-                <!-- OTP VERIFICATION - SIGNUP -->
-                <div id="form-otp-signup" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary text-center mb-2">
-                        Verification code sent to <span id="otp-signup-sent-email" class="text-white font-semibold"></span>
-                    </p>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit Code</label>
-                        <input type="text" id="signup-otp" placeholder="••••••" class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
-                    </div>
-                    <button id="otp-signup-btn" onclick="completeSignup()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
-                        <span id="otp-signup-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="otp-signup-btn-text">Verify &amp; Create Account</span>
-                    </button>
-                    <p class="text-xs text-textSecondary text-center mt-3" id="signup-resend-container">
-                        Didn't receive code? <button type="button" onclick="resendOtp('signup')" id="signup-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
-                    </p>
-                    <button type="button" onclick="switchAuthMode('signup')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Change Email
-                    </button>
-                </div>
-
-                <!-- OTP VERIFICATION & RESET - FORGOT PASSWORD -->
-                <div id="form-otp-forgot" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary text-center mb-2">
-                        Reset code sent to <span id="otp-forgot-sent-email" class="text-white font-semibold"></span>
-                    </p>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit Code</label>
-                        <input type="text" id="forgot-otp" placeholder="••••••" class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Create New Password</label>
-                        <div class="relative">
-                            <input type="password" id="forgot-password" oninput="checkForgotPasswordStrength(this.value)" placeholder="••••••••" class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('forgot-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
-                                <i data-lucide="eye" class="w-4 h-4" id="forgot-password-eye"></i>
-                            </button>
-                        </div>
-                        <div id="forgot-password-feedback" class="text-[10px] mt-1 text-red-400 hidden"></div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm New Password</label>
-                        <div class="relative">
-                            <input type="password" id="forgot-confirm-password" placeholder="••••••••" class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('forgot-confirm-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
-                                <i data-lucide="eye" class="w-4 h-4" id="forgot-confirm-password-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button id="otp-forgot-btn" onclick="completeReset()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
-                        <span id="otp-forgot-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="otp-forgot-btn-text">Reset Password &amp; Login</span>
-                    </button>
-                    <p class="text-xs text-textSecondary text-center mt-3" id="forgot-resend-container">
-                        Didn't receive code? <button type="button" onclick="resendOtp('forgot')" id="forgot-resend-btn" class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold" disabled>Resend in 60s</button>
-                    </p>
-                    <button type="button" onclick="switchAuthMode('forgot')" class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Change Email
-                    </button>
                 </div>
 
             </div>
@@ -1118,8 +1038,6 @@
         let authTempName = '';
         let authTempEmail = '';
         let authTempPassword = '';
-        let countdownTimer = null;
-        let cooldownSeconds = 0;
 
         function togglePasswordVisibility(id) {
             const input = document.getElementById(id);
@@ -1185,22 +1103,6 @@
             }
         }
 
-        function checkForgotPasswordStrength(val) {
-            const feedback = document.getElementById('forgot-password-feedback');
-            if (!val) {
-                feedback.classList.add('hidden');
-                return;
-            }
-            const result = validatePasswordStrength(val);
-            feedback.textContent = result.message;
-            feedback.classList.remove('hidden');
-            if (result.isValid) {
-                feedback.className = 'text-[10px] mt-1 text-accent';
-            } else {
-                feedback.className = 'text-[10px] mt-1 text-red-400';
-            }
-        }
-
         function isValidGmail(email) {
             if (!email) return false;
             const parts = email.split('@');
@@ -1222,9 +1124,6 @@
             // Hide all form panels
             document.getElementById('form-login').classList.add('hidden');
             document.getElementById('form-signup').classList.add('hidden');
-            document.getElementById('form-forgot').classList.add('hidden');
-            document.getElementById('form-otp-signup').classList.add('hidden');
-            document.getElementById('form-otp-forgot').classList.add('hidden');
 
             if (mode === 'login') {
                 modalTitle.textContent = 'Login';
@@ -1236,76 +1135,7 @@
                 modalSubtitle.textContent = 'Create your collaborative canvas account';
                 document.getElementById('form-signup').classList.remove('hidden');
                 setTimeout(() => document.getElementById('signup-name').focus(), 50);
-            } else if (mode === 'forgot') {
-                modalTitle.textContent = 'Forgot Password';
-                modalSubtitle.textContent = 'Reset your account credentials';
-                document.getElementById('form-forgot').classList.remove('hidden');
-                setTimeout(() => document.getElementById('forgot-email').focus(), 50);
-            } else if (mode === 'otp-signup') {
-                modalTitle.textContent = 'OTP Verification';
-                modalSubtitle.textContent = 'Confirm your Gmail address';
-                document.getElementById('form-otp-signup').classList.remove('hidden');
-                document.getElementById('otp-signup-sent-email').textContent = authTempEmail;
-                setTimeout(() => document.getElementById('signup-otp').focus(), 50);
-            } else if (mode === 'otp-forgot') {
-                modalTitle.textContent = 'Reset Password';
-                modalSubtitle.textContent = 'Verify OTP and set new password';
-                document.getElementById('form-otp-forgot').classList.remove('hidden');
-                document.getElementById('otp-forgot-sent-email').textContent = authTempEmail;
-                setTimeout(() => document.getElementById('forgot-otp').focus(), 50);
             }
-        }
-
-        function startResendCountdown(type) {
-            clearInterval(countdownTimer);
-            cooldownSeconds = 60;
-            const resendBtn = document.getElementById(`${type}-resend-btn`);
-            if (resendBtn) {
-                resendBtn.disabled = true;
-                resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
-            }
-
-            countdownTimer = setInterval(() => {
-                cooldownSeconds--;
-                if (cooldownSeconds <= 0) {
-                    clearInterval(countdownTimer);
-                    if (resendBtn) {
-                        resendBtn.disabled = false;
-                        resendBtn.textContent = 'Resend Code';
-                    }
-                } else {
-                    if (resendBtn) {
-                        resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
-                    }
-                }
-            }, 1000);
-        }
-
-        function resendOtp(type) {
-            const errorDiv = document.getElementById('auth-error');
-            const successDiv = document.getElementById('auth-success');
-            errorDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
-
-            showSuccess('Resending verification code...');
-            startResendCountdown(type);
-
-            const url = type === 'signup' ? `${API_URL}/auth/send-otp` : `${API_URL}/auth/forgot-password/send-otp`;
-            const payload = type === 'signup' ? { email: authTempEmail, requestType: 'signup' } : { email: authTempEmail };
-
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(response => response.json().then(data => {
-                if (!response.ok) {
-                    showError(data.error || 'Failed to resend verification code.');
-                } else {
-                    showSuccess(data.message || 'Verification code resent successfully.');
-                }
-            })).catch(() => {
-                showError('Network error. Please check your connection.');
-            });
         }
 
         async function handleSignupSubmit() {
@@ -1346,78 +1176,26 @@
                 return;
             }
 
-            authTempName = name;
-            authTempEmail = email.toLowerCase();
-            authTempPassword = password;
-
-            setButtonLoading('signup-btn', true, 'Sending Code...');
-            showSuccess('Sending verification code...');
+            setButtonLoading('signup-btn', true, 'Creating Account...');
+            showSuccess('Creating account...');
 
             try {
-                const response = await fetch(`${API_URL}/auth/send-otp`, {
+                const response = await fetch(`${API_URL}/auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: authTempEmail, requestType: 'signup' })
+                    body: JSON.stringify({ name, email, password })
                 });
                 const data = await response.json();
                 if (!response.ok) {
-                    showError(data.error || 'Failed to send verification code.');
+                    showError(data.error || 'Signup failed.');
                     setButtonLoading('signup-btn', false, 'Create Account');
                 } else {
-                    showSuccess(data.message || 'Verification code sent successfully.');
                     setButtonLoading('signup-btn', false, 'Create Account');
-                    switchAuthMode('otp-signup');
-                    startResendCountdown('signup');
+                    saveSessionAndLogin(data, true);
                 }
             } catch (err) {
                 showError('Network error. Please check your connection.');
                 setButtonLoading('signup-btn', false, 'Create Account');
-            }
-        }
-
-        async function handleForgotSubmit() {
-            const errorDiv = document.getElementById('auth-error');
-            const successDiv = document.getElementById('auth-success');
-            errorDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
-
-            let email = document.getElementById('forgot-email').value.trim();
-            if (!email) {
-                showError('Please enter your Gmail address.');
-                return;
-            }
-            if (!email.includes('@')) {
-                email = email + '@gmail.com';
-            }
-            if (!isValidGmail(email)) {
-                showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
-                return;
-            }
-
-            authTempEmail = email.toLowerCase();
-
-            setButtonLoading('forgot-btn', true, 'Sending Code...');
-            showSuccess('Sending verification code...');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/forgot-password/send-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: authTempEmail })
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'Failed to send verification code.');
-                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
-                } else {
-                    showSuccess(data.message || 'Verification code sent successfully.');
-                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
-                    switchAuthMode('otp-forgot');
-                    startResendCountdown('forgot');
-                }
-            } catch (err) {
-                showError('Network error. Please check your connection.');
-                setButtonLoading('forgot-btn', false, 'Send Reset Code');
             }
         }
 
@@ -1447,99 +1225,11 @@
                     return;
                 }
 
-                saveSessionAndLogin(data);
+                saveSessionAndLogin(data, false);
                 setButtonLoading('login-btn', false, 'Login');
             } catch (err) {
                 showError('Network error. Make sure the backend is running.');
                 setButtonLoading('login-btn', false, 'Login');
-            }
-        }
-
-        async function completeSignup() {
-            const otp = document.getElementById('signup-otp').value.trim();
-
-            if (!otp) {
-                showError('Please enter verification code.');
-                return;
-            }
-
-            setButtonLoading('otp-signup-btn', true, 'Creating Account...');
-            showSuccess('Creating account...');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/signup`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: authTempName,
-                        email: authTempEmail,
-                        otp,
-                        password: authTempPassword
-                    })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
-                    setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
-                    return;
-                }
-
-                saveSessionAndLogin(data, true);
-                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
-            } catch (err) {
-                showError('Network error during account creation.');
-                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
-            }
-        }
-
-        async function completeReset() {
-            const otp = document.getElementById('forgot-otp').value.trim();
-            const newPassword = document.getElementById('forgot-password').value;
-            const confirmPassword = document.getElementById('forgot-confirm-password').value;
-
-            if (!otp || !newPassword || !confirmPassword) {
-                showError('All fields are required.');
-                return;
-            }
-
-            const passVal = validatePasswordStrength(newPassword);
-            if (!passVal.isValid) {
-                showError('New password rules: ' + passVal.message);
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showError('Passwords do not match.');
-                return;
-            }
-
-            setButtonLoading('otp-forgot-btn', true, 'Resetting Password...');
-            showSuccess('Resetting password...');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/forgot-password/reset`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: authTempEmail,
-                        otp,
-                        newPassword
-                    })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
-                    setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
-                    return;
-                }
-
-                saveSessionAndLogin(data);
-                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
-            } catch (err) {
-                showError('Network error during password reset.');
-                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
             }
         }
 
@@ -1570,7 +1260,14 @@
             syncHistory();
 
             if (isSignup) {
-                showSuccess("Congratulations!\nYour account has been created successfully.\nWelcome to Infinity AI.");
+                const emailSent = data.emailSent;
+                let msg = "";
+                if (emailSent) {
+                    msg = "Welcome to Infinity AI!\nYour account has been created successfully.\nA welcome email has been sent.";
+                } else {
+                    msg = "Welcome to Infinity AI!\nYour account has been created successfully.\nWe could not send the welcome email at this time.";
+                }
+                showSuccess(msg);
                 setTimeout(() => {
                     closeModal('auth-modal');
                     if (window.parent && window.parent !== window) {
@@ -1578,7 +1275,7 @@
                     }
                 }, 3000);
             } else {
-                showSuccess(`Welcome back, ${userName}!\nYou have successfully logged in to Infinity AI.`);
+                showSuccess(`Welcome back!\nYou have successfully logged in to Infinity AI.`);
                 setTimeout(() => {
                     closeModal('auth-modal');
                     if (window.parent && window.parent !== window) {
@@ -1609,17 +1306,14 @@
             document.getElementById('login-password').value = '';
             document.getElementById('signup-name').value = '';
             document.getElementById('signup-email').value = '';
-            document.getElementById('signup-otp').value = '';
             document.getElementById('signup-password').value = '';
-            document.getElementById('forgot-email').value = '';
-            document.getElementById('forgot-otp').value = '';
-            document.getElementById('forgot-password').value = '';
+            document.getElementById('signup-confirm-password').value = '';
             
             document.getElementById('auth-error').classList.add('hidden');
             document.getElementById('auth-success').classList.add('hidden');
+            const feedback = document.getElementById('signup-password-feedback');
+            if (feedback) feedback.classList.add('hidden');
         }
-
-
 
         window.logout = () => {
             authToken = null;
@@ -1645,11 +1339,19 @@
             renderSidebarHistory();
             startNewChat(false);
 
+            // Show logout success message
+            openAuthModal();
+            showSuccess("You have been logged out successfully.");
+            setTimeout(() => {
+                closeModal('auth-modal');
+            }, 2000);
+
             // Alert parent window to trigger logout globally
             if (window.parent && window.parent !== window) {
                 window.parent.postMessage({ type: 'LOGOUT_TRIGGER' }, '*');
             }
         };
+
 
         async function fetchHistory() {
             try {

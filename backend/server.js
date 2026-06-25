@@ -441,7 +441,7 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Test Email Route for Gmail OTP Verification verification
+// Test Email Route for deployment verification
 app.get('/test-email', async (req, res) => {
   try {
     const { transporter } = require('./services/emailService');
