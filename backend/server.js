@@ -1,23 +1,21 @@
 require('dotenv').config();
 
-const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
-const emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
-
-if (!emailUser) {
-  console.warn("⚠ WARNING: EMAIL_USER or EMAIL environment variable is missing. Email sending will fail.");
+// Standardize email env vars
+if (!process.env.EMAIL_USER && process.env.EMAIL) {
+  process.env.EMAIL_USER = process.env.EMAIL;
 }
-if (!emailPass) {
-  console.warn("⚠ WARNING: EMAIL_PASS or EMAIL_PASSWORD environment variable is missing. Email sending will fail.");
+if (!process.env.EMAIL_PASS && process.env.EMAIL_PASSWORD) {
+  process.env.EMAIL_PASS = process.env.EMAIL_PASSWORD;
 }
 
-const { verifySMTP } = require('./services/emailService');
-verifySMTP().then(success => {
-  if (!success) {
-    console.warn("⚠ WARNING: SMTP Verification Failed on Startup. Email sending may fail.");
-  } else {
-    console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
+// Strict ENV Validation
+const requiredEnv = ["MONGO_URI", "EMAIL_USER", "EMAIL_PASS", "JWT_SECRET"];
+for (const envVar of requiredEnv) {
+  if (!process.env[envVar]) {
+    console.error(`❌ CRITICAL ERROR: Environment variable ${envVar} is missing.`);
+    process.exit(1);
   }
-});
+}
 
 const express = require('express');
 const http = require('http');
@@ -26,16 +24,30 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const { verifySMTP } = require('./services/emailService');
 
 const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://infinity-book.pages.dev"
+];
+
 const corsMiddleware = cors({
   origin: function (origin, callback) {
-    // Dynamically reflect the request origin to allow localhost, preview subdomains, and main domain perfectly with credentials: true
-    return callback(null, true);
+    if (!origin) return callback(null, true);
+    // Allow if matches localhost, standard cloudflare pages subdomains, or the main domain
+    const isAllowed = allowedOrigins.includes(origin) || 
+                      origin.endsWith(".pages.dev") || 
+                      origin.includes("localhost:");
+    if (isAllowed) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -60,9 +72,6 @@ const io = new Server(server, {
     methods: ["GET", "POST", "OPTIONS"]
   }
 });
-
-// Connect to MongoDB
-connectDB();
 
 mongoose.connection.on("connected", () => {
   console.log("✅ MongoDB Reconnected");
@@ -454,14 +463,34 @@ const PORT = process.env.PORT || 5000;
 
 console.log("Checking ENV");
 console.log("MONGO_URI:", process.env.MONGO_URI ? "FOUND" : "MISSING");
-console.log("EMAIL_USER:", (process.env.EMAIL_USER || process.env.EMAIL) ? "FOUND" : "MISSING");
-console.log("EMAIL_PASS:", (process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD) ? "FOUND" : "MISSING");
+console.log("EMAIL_USER:", process.env.EMAIL_USER ? "FOUND" : "MISSING");
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "FOUND" : "MISSING");
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "FOUND" : "MISSING");
-console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID ? "FOUND" : "MISSING");
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    console.log("Connecting to MongoDB...");
+    const conn = await connectDB();
+    if (!conn) {
+      throw new Error("MongoDB Connection Failed");
+    }
+    console.log("✅ MongoDB Connected Successfully.");
+
+    console.log("Verifying SMTP connection...");
+    const smtpSuccess = await verifySMTP();
+    if (!smtpSuccess) {
+      throw new Error("SMTP Verification Failed. Email sending config is incorrect.");
+    }
+    console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
+
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ CRITICAL: Server failed to start:", err);
+    process.exit(1);
+  }
+}
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
@@ -471,3 +500,5 @@ server.on("error", (err) => {
     console.error(err);
   }
 });
+
+startServer();

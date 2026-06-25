@@ -5,10 +5,7 @@ const crypto = require('crypto');
 const User = require('../models/User');
 const Otp = require('../models/Otp');
 const { sendOTP } = require('../services/emailService');
-const { OAuth2Client } = require('google-auth-library');
-
 const router = express.Router();
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const disposableDomains = [
     'mailinator.com', '10minutemail.com', 'guerillamail.com', 'yopmail.com',
@@ -90,7 +87,11 @@ router.post('/send-otp', async (req, res) => {
         res.json({ success: true, message: 'Verification code sent successfully.' });
     } catch (err) {
         console.error('[OTP Send Error]:', err);
-        res.status(500).json({ error: 'Server error. Please try again.' });
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
     }
 });
 
@@ -126,7 +127,11 @@ router.post('/verify-otp', async (req, res) => {
         res.json({ success: true, message: 'Verification code verified successfully.' });
     } catch (err) {
         console.error('[OTP Verify Error]:', err);
-        res.status(500).json({ error: 'Verification failed. Please try again.' });
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
     }
 });
 
@@ -200,7 +205,11 @@ router.post('/signup', async (req, res) => {
         });
     } catch (err) {
         console.error('[Signup Error]:', err);
-        res.status(500).json({ error: 'Signup failed. Please try again.' });
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
     }
 });
 
@@ -244,7 +253,11 @@ router.post('/login', async (req, res) => {
         });
     } catch (err) {
         console.error('[Login Error]:', err);
-        res.status(500).json({ error: 'Server error. Please try again.' });
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
     }
 });
 
@@ -296,7 +309,11 @@ router.post('/forgot-password/send-otp', async (req, res) => {
         res.json({ success: true, message: 'Verification code sent successfully.' });
     } catch (err) {
         console.error('[Forgot Password Send OTP Error]:', err);
-        res.status(500).json({ error: 'Failed to send verification code. Try again.' });
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
     }
 });
 
@@ -355,82 +372,11 @@ router.post('/forgot-password/reset', async (req, res) => {
         });
     } catch (err) {
         console.error('[Forgot Password Reset Error]:', err);
-        res.status(500).json({ error: 'Reset password failed. Please try again.' });
-    }
-});
-
-// 7. GOOGLE ONE-CLICK SIGN IN
-router.post('/google', async (req, res) => {
-    try {
-        const { token } = req.body;
-        if (!token) {
-            return res.status(400).json({ error: 'Google ID Token is required.' });
-        }
-
-        let payload = null;
-        try {
-            const ticket = await googleClient.verifyIdToken({
-                idToken: token,
-                audience: process.env.GOOGLE_CLIENT_ID
-            });
-            payload = ticket.getPayload();
-        } catch (verifyErr) {
-            // Development/Fallback bypass if Client ID is not registered
-            console.warn('[Google Auth] Client ID verification failed or unconfigured. Extracting token payloads directly as fallback.');
-            const decoded = jwt.decode(token);
-            if (decoded && decoded.email) {
-                payload = decoded;
-            } else {
-                return res.status(400).json({ error: 'Invalid Google Identity token.' });
-            }
-        }
-
-        const { sub: googleId, email, name, picture } = payload;
-        if (!email) {
-            return res.status(400).json({ error: 'Email not provided by Google account.' });
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-        let user = await User.findOne({ email: normalizedEmail });
-
-        if (!user) {
-            user = new User({
-                name: name || email.split('@')[0],
-                email: normalizedEmail,
-                googleId,
-                picture: picture || '',
-                verified: true,
-                lastLogin: Date.now()
-            });
-            await user.save();
-        } else {
-            let updated = false;
-            if (!user.googleId) { user.googleId = googleId; updated = true; }
-            if (!user.picture && picture) { user.picture = picture; updated = true; }
-            if (!user.name && name) { user.name = name; updated = true; }
-            if (!user.verified) { user.verified = true; updated = true; }
-            
-            user.lastLogin = Date.now();
-            await user.save();
-        }
-
-        const sessionToken = jwt.sign(
-            { userId: user._id }, 
-            process.env.JWT_SECRET || 'infinity_fallback_secret_key_2026', 
-            { expiresIn: '30d' }
-        );
-
-        res.json({
-            token: sessionToken,
-            name: user.name,
-            email: user.email,
-            picture: user.picture || '',
-            history: user.history || {},
-            projects: user.projects || []
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
         });
-    } catch (err) {
-        console.error('[Google Sign-In Error]:', err);
-        res.status(500).json({ error: 'Google authentication failed.' });
     }
 });
 

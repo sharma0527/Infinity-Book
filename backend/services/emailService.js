@@ -1,24 +1,28 @@
 const nodemailer = require("nodemailer");
 
-const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
-let emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+const emailUser = (process.env.EMAIL_USER || process.env.EMAIL || "").trim().replace(/^["']|["']$/g, '');
+let emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
 if (emailPass) {
-    emailPass = emailPass.trim().replace(/\s+/g, '');
+    emailPass = emailPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
 }
 
 const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    family: 4, // Force IPv4 to prevent connection timeout/socket close errors on local networks
+    service: "gmail",
     auth: {
         user: emailUser,
         pass: emailPass
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
 // Verify SMTP connection on service load
 async function verifySMTP() {
+    console.log("Verifying SMTP connection credentials:", {
+        EMAIL_USER: emailUser,
+        EMAIL_PASS_EXISTS: !!emailPass
+    });
     try {
         await transporter.verify();
         console.log("SMTP Connected Successfully");
@@ -33,6 +37,12 @@ async function sendOTP(email, otp) {
     if (!emailUser || !emailPass) {
         throw new Error("SMTP credentials missing. Please check EMAIL_USER/EMAIL and EMAIL_PASS/EMAIL_PASSWORD.");
     }
+
+    console.log("Preparing to send OTP email via Nodemailer:", {
+        EMAIL_USER: emailUser,
+        EMAIL_PASS_EXISTS: !!emailPass,
+        recipient: email
+    });
 
     const info = await transporter.sendMail({
         from: `"Infinity AI" <${emailUser}>`,
@@ -55,7 +65,11 @@ async function sendOTP(email, otp) {
         `
     });
 
-    console.log("Email Sent:", info.messageId);
+    if (!info || !info.messageId) {
+        throw new Error("Mail was not successfully sent; no message ID returned from SMTP.");
+    }
+
+    console.log("Email Sent Successfully:", info.messageId);
     return info;
 }
 

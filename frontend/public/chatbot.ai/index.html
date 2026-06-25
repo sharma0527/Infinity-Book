@@ -40,8 +40,6 @@
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <!-- Google Identity Services SDK -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Document Parsers -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -750,7 +748,7 @@
             <input type="hidden" id="auth-backend-url" />
 
             <!-- Google Sign-In Integrations -->
-            <div id="google-signin-container" class="mt-5 pt-5 border-t border-white/10 flex flex-col items-center">
+            <div id="google-signin-container" style="display: none !important;" class="hidden mt-5 pt-5 border-t border-white/10 flex flex-col items-center">
                 <p class="text-[10px] font-semibold text-textSecondary uppercase tracking-wider mb-3">Or continue with</p>
                 <div id="google-login-btn"></div>
             </div>
@@ -1116,7 +1114,7 @@
             tabLogin.classList.remove('active');
             tabSignup.classList.remove('active');
             tabContainer.classList.remove('hidden');
-            googleContainer.classList.remove('hidden');
+            googleContainer.classList.add('hidden');
 
             if (mode === 'login') {
                 tabLogin.classList.add('active');
@@ -1430,57 +1428,8 @@
         }
 
         function initGoogleSignIn() {
-            if (googleInitialized) return;
-            if (typeof google === 'undefined') {
-                setTimeout(initGoogleSignIn, 500);
-                return;
-            }
-
-            let clientId = null;
-            try {
-                if (window.parent && window.parent.GOOGLE_CLIENT_ID) {
-                    clientId = window.parent.GOOGLE_CLIENT_ID;
-                }
-            } catch (e) {}
-
-            if (!clientId) {
-                clientId = '846733221975-43pt1k3ch4oah8m60q1jcrgrdki3vgrr.apps.googleusercontent.com';
-            }
-
-            google.accounts.id.initialize({
-                client_id: clientId,
-                callback: handleCredentialResponse
-            });
-
-            google.accounts.id.renderButton(
-                document.getElementById('google-login-btn'),
-                { theme: 'outline', size: 'large', width: 280 }
-            );
-
-            googleInitialized = true;
-        }
-
-        async function handleCredentialResponse(response) {
-            const errorDiv = document.getElementById('auth-error');
-            if (errorDiv) errorDiv.classList.add('hidden');
-
-            try {
-                const res = await fetch(`${API_URL}/auth/google`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
-                });
-
-                const data = await res.json();
-                if (!res.ok) {
-                    showError(data.error || 'Google authentication failed.');
-                    return;
-                }
-
-                saveSessionAndLogin(data);
-            } catch (err) {
-                showError('Network error during Google Sign-In.');
-            }
+            // Google Sign-In is disabled/removed
+            return;
         }
 
         window.logout = () => {
