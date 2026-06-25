@@ -15,9 +15,9 @@ let transporter = nodemailer.createTransport({
         pass: emailPass
     },
     family: 4,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000
 });
 
 // Verify SMTP connection on service load
@@ -46,9 +46,9 @@ async function verifySMTP() {
                 pass: emailPass
             },
             family: 4,
-            connectionTimeout: 10000,
-            greetingTimeout: 10000,
-            socketTimeout: 10000
+            connectionTimeout: 30000,
+            greetingTimeout: 30000,
+            socketTimeout: 30000
         });
 
         try {
