@@ -6,30 +6,53 @@ if (emailPass) {
     emailPass = emailPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
 }
 
-const transporter = nodemailer.createTransport({
+let transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    requireTLS: true,
+    port: 465,
+    secure: true,
     auth: {
         user: emailUser,
         pass: emailPass
     },
     family: 4,
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000
 });
 
 // Verify SMTP connection on service load
 async function verifySMTP() {
     try {
+        console.log("Attempting SMTP verification on Port 465 (SSL)...");
         await transporter.verify();
-        console.log("✅ SMTP Ready");
+        console.log("✅ SMTP Ready (Port 465)");
         return true;
     } catch (err) {
-        console.error("SMTP Verify Failed:", err.message);
-        return false;
+        console.warn(`SMTP Port 465 Verify Failed (${err.message}). Trying fallback Port 587 (STARTTLS)...`);
+        
+        transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false,
+            requireTLS: true,
+            auth: {
+                user: emailUser,
+                pass: emailPass
+            },
+            family: 4,
+            connectionTimeout: 10000,
+            greetingTimeout: 10000,
+            socketTimeout: 10000
+        });
+
+        try {
+            await transporter.verify();
+            console.log("✅ SMTP Ready (Port 587)");
+            return true;
+        } catch (fallbackErr) {
+            console.error("SMTP Verify Failed on all configurations:", fallbackErr.message);
+            return false;
+        }
     }
 }
 
