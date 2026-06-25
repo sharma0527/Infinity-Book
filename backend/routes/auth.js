@@ -10,7 +10,9 @@ const router = express.Router();
 const disposableDomains = [
     'mailinator.com', '10minutemail.com', 'guerillamail.com', 'yopmail.com',
     'tempmail.com', 'throwawaymail.com', 'temp-mail.org', 'tempmail.net',
-    'trashmail.com', 'fakeinbox.com', 'sharklasers.com', 'guerrillamail.info'
+    'trashmail.com', 'fakeinbox.com', 'sharklasers.com', 'guerrillamail.info',
+    'gmailnator.com', 'maildrop.cc', 'dispostable.com', 'getairmail.com',
+    'mintemail.com', 'maildominator.com', 'tempmailaddress.com'
 ];
 
 function isDisposable(email) {
@@ -23,7 +25,12 @@ function isGmail(email) {
     if (!email) return false;
     const parts = email.split('@');
     if (parts.length !== 2) return false;
-    return parts[1].toLowerCase() === 'gmail.com';
+    if (parts[1].toLowerCase() !== 'gmail.com') return false;
+    
+    // Block Gmail aliases using "+" to prevent fake/temporary registrations
+    if (parts[0].includes('+')) return false;
+    
+    return true;
 }
 
 // Email helper functions are imported from emailService
@@ -107,21 +114,18 @@ router.post('/verify-otp', async (req, res) => {
 
         const normalizedEmail = email.toLowerCase().trim();
         
-        // Development bypass code support
-        const isTestCode = otp === '123456';
-
         const storedOtp = await Otp.findOne({ email: normalizedEmail });
-        if (!storedOtp && !isTestCode) {
+        if (!storedOtp) {
             return res.status(400).json({ error: 'Verification code expired or not found. Please request a new one.' });
         }
 
-        if (storedOtp && storedOtp.expiresAt < Date.now() && !isTestCode) {
+        if (storedOtp.expiresAt < Date.now()) {
             await Otp.deleteOne({ email: normalizedEmail });
             return res.status(400).json({ error: 'Verification code expired. Please request a new one.' });
         }
 
         const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
-        const matches = isTestCode ? true : (computedHash === storedOtp.otp);
+        const matches = (computedHash === storedOtp.otp);
         if (!matches) {
             return res.status(400).json({ error: 'Invalid verification code. Please check and try again.' });
         }
@@ -148,22 +152,19 @@ router.post('/signup', async (req, res) => {
         const normalizedEmail = email.toLowerCase().trim();
 
         // Security check: Verify the OTP again during account creation
-        const isTestCode = otp === '123456';
         const storedOtp = await Otp.findOne({ email: normalizedEmail });
-        if (!storedOtp && !isTestCode) {
+        if (!storedOtp) {
             return res.status(400).json({ error: 'Session expired. Please request a code again.' });
         }
 
         const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
-        const matches = isTestCode ? true : (computedHash === storedOtp.otp);
+        const matches = (computedHash === storedOtp.otp);
         if (!matches) {
             return res.status(400).json({ error: 'OTP verification failed.' });
         }
 
         // Clean up OTP record
-        if (!isTestCode) {
-            await Otp.deleteOne({ email: normalizedEmail });
-        }
+        await Otp.deleteOne({ email: normalizedEmail });
 
         // Check if user already exists
         let user = await User.findOne({ email: normalizedEmail });
@@ -330,23 +331,20 @@ router.post('/forgot-password/reset', async (req, res) => {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
-        const isTestCode = otp === '123456';
 
         const storedOtp = await Otp.findOne({ email: normalizedEmail });
-        if (!storedOtp && !isTestCode) {
+        if (!storedOtp) {
             return res.status(400).json({ error: 'Verification session expired. Please request a code again.' });
         }
 
         const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
-        const matches = isTestCode ? true : (computedHash === storedOtp.otp);
+        const matches = (computedHash === storedOtp.otp);
         if (!matches) {
             return res.status(400).json({ error: 'Invalid verification code.' });
         }
 
         // Clean up OTP record
-        if (!isTestCode) {
-            await Otp.deleteOne({ email: normalizedEmail });
-        }
+        await Otp.deleteOne({ email: normalizedEmail });
 
         const user = await User.findOne({ email: normalizedEmail, verified: true });
         if (!user) {

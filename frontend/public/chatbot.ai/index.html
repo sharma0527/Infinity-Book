@@ -1318,7 +1318,7 @@
                     return;
                 }
 
-                saveSessionAndLogin(data);
+                saveSessionAndLogin(data, true);
             } catch (err) {
                 showError('Network error during account creation.');
             }
@@ -1362,7 +1362,7 @@
             }
         }
 
-        function saveSessionAndLogin(data) {
+        function saveSessionAndLogin(data, isSignup = false) {
             authToken  = data.token;
             userEmail  = data.email;
             userName   = data.name;
@@ -1382,17 +1382,25 @@
                 localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
             }
 
-            closeModal('auth-modal');
             clearAuthInputs();
-
             updateAuthUI();
             renderProjects();
             renderSidebarHistory();
             syncHistory();
 
-            // Alert parent window of successful login to sync state without refresh
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+            if (isSignup) {
+                showSuccess("You have successfully signed up and logged in to Infinity AI. Welcome to Infinity AI!");
+                setTimeout(() => {
+                    closeModal('auth-modal');
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+                    }
+                }, 3000);
+            } else {
+                closeModal('auth-modal');
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+                }
             }
         }
 
