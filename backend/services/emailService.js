@@ -1,66 +1,26 @@
 const nodemailer = require("nodemailer");
 
-const emailUser = (process.env.EMAIL_USER || process.env.EMAIL || "").trim().replace(/^["']|["']$/g, '');
-let emailPass = process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
+const emailUser = (process.env.SMTP_USER || process.env.EMAIL_USER || process.env.EMAIL || "").trim().replace(/^["']|["']$/g, '');
+let emailPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
 if (emailPass) {
     emailPass = emailPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
 }
 
-let transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: false,
+    requireTLS: true,
     auth: {
         user: emailUser,
         pass: emailPass
     },
     family: 4,
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000
+    connectionTimeout: 60000,
+    greetingTimeout: 60000,
+    socketTimeout: 60000
 });
 
-// Verify SMTP connection on service load
-async function verifySMTP() {
-    // Skip SMTP verification if a REST API key is configured
-    if (process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.SENDGRID_API_KEY) {
-        console.log("✅ Email service running via HTTP REST API (SMTP verification bypassed)");
-        return true;
-    }
-
-    try {
-        console.log("Attempting SMTP verification on Port 465 (SSL)...");
-        await transporter.verify();
-        console.log("✅ SMTP Ready (Port 465)");
-        return true;
-    } catch (err) {
-        console.warn(`SMTP Port 465 Verify Failed (${err.message}). Trying fallback Port 587 (STARTTLS)...`);
-        
-        transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 587,
-            secure: false,
-            requireTLS: true,
-            auth: {
-                user: emailUser,
-                pass: emailPass
-            },
-            family: 4,
-            connectionTimeout: 30000,
-            greetingTimeout: 30000,
-            socketTimeout: 30000
-        });
-
-        try {
-            await transporter.verify();
-            console.log("✅ SMTP Ready (Port 587)");
-            return true;
-        } catch (fallbackErr) {
-            console.error("SMTP Verify Failed on all configurations:", fallbackErr.message);
-            return false;
-        }
-    }
-}
 
 async function sendWelcomeEmail(email, name) {
     const subject = "Welcome to Infinity AI";
@@ -185,4 +145,4 @@ async function sendWelcomeEmail(email, name) {
     }
 }
 
-module.exports = { transporter, verifySMTP, sendWelcomeEmail };
+module.exports = { transporter, sendWelcomeEmail };

@@ -26,7 +26,6 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
-const { verifySMTP } = require('./services/emailService');
 
 const authRoutes = require('./routes/auth');
 const historyRoutes = require('./routes/history');
@@ -489,11 +488,6 @@ async function startServer() {
       throw new Error("MongoDB Connection Failed");
     }
     console.log("✅ MongoDB Connected Successfully.");
-
-    const smtpSuccess = await verifySMTP();
-    if (!smtpSuccess) {
-      console.warn("SMTP unavailable. Server will continue to run.");
-    }
 
     server.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
