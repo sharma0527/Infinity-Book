@@ -78,10 +78,12 @@ router.post('/send-otp', async (req, res) => {
         console.log(`Verification Code: ${otp}`);
         console.log(`========================================\n`);
 
-        // Trigger email delivery and await result
         const sent = await sendOTP(normalizedEmail, otp);
-        if (!sent) {
-            return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+        if(!sent){
+            return res.status(500).json({
+                success:false,
+                error:"Unable to send OTP."
+            });
         }
 
         res.json({ success: true, message: 'Verification code sent successfully.' });
@@ -300,10 +302,12 @@ router.post('/forgot-password/send-otp', async (req, res) => {
         console.log(`Verification Code: ${otp}`);
         console.log(`========================================\n`);
 
-        // Trigger email delivery and await result
         const sent = await sendOTP(normalizedEmail, otp);
-        if (!sent) {
-            return res.status(500).json({ error: 'Failed to send verification code. Please try again.' });
+        if(!sent){
+            return res.status(500).json({
+                success:false,
+                error:"Unable to send OTP."
+            });
         }
 
         res.json({ success: true, message: 'Verification code sent successfully.' });

@@ -18,40 +18,28 @@ const transporter = nodemailer.createTransport({
     family: 4,
     connectionTimeout: 30000,
     greetingTimeout: 30000,
-    socketTimeout: 30000,
-    tls: {
-        rejectUnauthorized: false
-    }
+    socketTimeout: 30000
 });
 
 // Verify SMTP connection on service load
 async function verifySMTP() {
-    console.log("Verifying SMTP connection credentials:", {
-        EMAIL_USER: emailUser,
-        EMAIL_PASS_EXISTS: !!emailPass
-    });
     try {
         await transporter.verify();
-        console.log("SMTP Connected Successfully");
+        console.log("✅ SMTP Ready");
         return true;
     } catch (err) {
-        console.error("SMTP Connection Verification Failed:", err);
+        console.error("SMTP Verify Failed:", err.message);
         return false;
     }
 }
 
 async function sendOTP(email, otp) {
     if (!emailUser || !emailPass) {
-        throw new Error("SMTP credentials missing. Please check EMAIL_USER/EMAIL and EMAIL_PASS/EMAIL_PASSWORD.");
+        console.error("SMTP credentials missing.");
+        return false;
     }
 
-    console.log("Preparing to send OTP email via Nodemailer:", {
-        EMAIL_USER: emailUser,
-        EMAIL_PASS_EXISTS: !!emailPass,
-        recipient: email
-    });
-
-    const info = await transporter.sendMail({
+    const mailOptions = {
         from: `"Infinity AI" <${emailUser}>`,
         to: email,
         subject: "Infinity AI Verification Code",
@@ -70,14 +58,16 @@ async function sendOTP(email, otp) {
                 <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">This code will expire in 10 minutes. If you did not request this, you can safely ignore this email.</p>
             </div>
         `
-    });
+    };
 
-    if (!info || !info.messageId) {
-        throw new Error("Mail was not successfully sent; no message ID returned from SMTP.");
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Email Sent:", info.messageId);
+        return true;
+    } catch (err) {
+        console.error("Email Send Error:", err);
+        return false;
     }
-
-    console.log("Email Sent Successfully:", info.messageId);
-    return info;
 }
 
 module.exports = { transporter, verifySMTP, sendOTP };

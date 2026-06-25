@@ -478,9 +478,7 @@ async function startServer() {
 
     const smtpSuccess = await verifySMTP();
     if (!smtpSuccess) {
-      console.warn("⚠ WARNING: SMTP connection failed. Email sending is disabled/unavailable, but server will continue to boot.");
-    } else {
-      console.log("✅ SMTP Verification Passed. Server is ready to send emails.");
+      console.warn("SMTP unavailable. Server will continue to run.");
     }
 
     server.listen(PORT, () => {
