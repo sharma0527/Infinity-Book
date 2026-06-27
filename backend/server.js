@@ -50,12 +50,31 @@ const allowedOrigins = [
   "https://infinity-book.pages.dev"
 ];
 
+// Dynamically add environment defined origins
+if (process.env.FRONTEND_URL) {
+  process.env.FRONTEND_URL.split(',').forEach(url => {
+    const trimmed = url.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+if (process.env.CORS_ORIGIN) {
+  process.env.CORS_ORIGIN.split(',').forEach(url => {
+    const trimmed = url.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+
 const corsMiddleware = cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    // Allow if matches localhost, standard cloudflare pages subdomains, or the main domain
+    // Allow if matches localhost, standard cloudflare pages subdomains, render subdomains, or explicit origins
     const isAllowed = allowedOrigins.includes(origin) || 
                       origin.endsWith(".pages.dev") || 
+                      origin.endsWith(".onrender.com") ||
                       origin.includes("localhost:");
     if (isAllowed) {
       return callback(null, true);

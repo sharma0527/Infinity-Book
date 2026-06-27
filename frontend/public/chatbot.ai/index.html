@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Infinity AI</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -29,14 +30,14 @@
             }
         }
     </script>
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="./socket.io.min.js"></script>
-    
+
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -50,7 +51,7 @@
         // Set up pdf.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
-    
+
     <!-- Highlight.js for Code Blocks -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
@@ -68,13 +69,16 @@
             width: 8px;
             height: 8px;
         }
+
         ::-webkit-scrollbar-track {
             background: transparent;
         }
+
         ::-webkit-scrollbar-thumb {
             background: #334155;
             border-radius: 4px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: #475569;
         }
@@ -90,6 +94,7 @@
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
         }
+
         .prose code {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             background-color: rgba(255, 255, 255, 0.1);
@@ -97,17 +102,46 @@
             border-radius: 0.25rem;
             font-size: 0.875em;
         }
+
         .prose pre code {
             background-color: transparent;
             padding: 0;
             color: #e2e8f0;
         }
-        .prose p { margin-bottom: 0.75rem; }
-        .prose p:last-child { margin-bottom: 0; }
-        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
-        .prose a { color: #10a37f; text-decoration: underline; }
-        .prose h1, .prose h2, .prose h3, .prose h4 { font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+
+        .prose p {
+            margin-bottom: 0.75rem;
+        }
+
+        .prose p:last-child {
+            margin-bottom: 0;
+        }
+
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .prose ol {
+            list-style-type: decimal;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .prose a {
+            color: #10a37f;
+            text-decoration: underline;
+        }
+
+        .prose h1,
+        .prose h2,
+        .prose h3,
+        .prose h4 {
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
 
         /* Code Copy Button */
         .copy-code-btn {
@@ -127,9 +161,11 @@
             align-items: center;
             gap: 0.25rem;
         }
+
         .prose pre:hover .copy-code-btn {
             opacity: 1;
         }
+
         .copy-code-btn:hover {
             color: #ffffff;
             background: #334155;
@@ -152,9 +188,17 @@
             vertical-align: baseline;
             color: #ffffff;
         }
+
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
         }
 
         /* Glassmorphism Header */
@@ -163,7 +207,7 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
-        
+
         /* Sidebar transition */
         #sidebar {
             transition: transform 0.3s ease;
@@ -178,92 +222,344 @@
             display: inline-block;
             animation: typing 1.4s infinite ease-in-out both;
         }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
         @keyframes typing {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
         }
 
         /* ── ProfileCard ── */
         :root {
-            --pc-pointer-x:50%;--pc-pointer-y:50%;--pc-pointer-center:0;
-            --pc-from-top:0.5;--pc-from-left:0.5;--pc-card-opacity:0;
-            --pc-rotate-x:0deg;--pc-rotate-y:0deg;
-            --pc-bg-x:50%;--pc-bg-y:50%;
-            --pc-inner-gradient:linear-gradient(145deg,#60496e8c 0%,#71C4FF44 100%);
-            --pc-glow:rgba(125,190,255,0.67);
-            --pc-sp1:hsl(2,100%,73%);--pc-sp2:hsl(53,100%,69%);--pc-sp3:hsl(93,100%,69%);
-            --pc-sp4:hsl(176,100%,76%);--pc-sp5:hsl(228,100%,74%);--pc-sp6:hsl(283,100%,73%);
-            --pc-radius:28px;
+            --pc-pointer-x: 50%;
+            --pc-pointer-y: 50%;
+            --pc-pointer-center: 0;
+            --pc-from-top: 0.5;
+            --pc-from-left: 0.5;
+            --pc-card-opacity: 0;
+            --pc-rotate-x: 0deg;
+            --pc-rotate-y: 0deg;
+            --pc-bg-x: 50%;
+            --pc-bg-y: 50%;
+            --pc-inner-gradient: linear-gradient(145deg, #60496e8c 0%, #71C4FF44 100%);
+            --pc-glow: rgba(125, 190, 255, 0.67);
+            --pc-sp1: hsl(2, 100%, 73%);
+            --pc-sp2: hsl(53, 100%, 69%);
+            --pc-sp3: hsl(93, 100%, 69%);
+            --pc-sp4: hsl(176, 100%, 76%);
+            --pc-sp5: hsl(228, 100%, 74%);
+            --pc-sp6: hsl(283, 100%, 73%);
+            --pc-radius: 28px;
         }
-        .pc-card-wrapper{perspective:500px;transform:translate3d(0,0,.1px);position:relative;touch-action:none;z-index:10}
-        .pc-behind{position:absolute;inset:0;z-index:0;pointer-events:none;
-            background:radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),var(--pc-glow) 0%,transparent 50%);
-            filter:blur(50px) saturate(1.1);opacity:calc(.8*var(--pc-card-opacity));transition:opacity 200ms}
-        .pc-card-shell{position:relative;z-index:1}
-        .pc-card{width:300px;height:420px;display:grid;border-radius:var(--pc-radius);position:relative;
-            box-shadow:rgba(0,0,0,.8) calc((var(--pc-from-left)*10px) - 3px) calc((var(--pc-from-top)*20px) - 6px) 20px -5px;
-            transition:transform 1s ease;transform:translateZ(0) rotateX(0) rotateY(0);
-            background:rgba(0,0,0,.9);overflow:hidden;backface-visibility:hidden}
-        .pc-card:hover,.pc-card.active{transition:none;transform:translateZ(0) rotateX(var(--pc-rotate-y)) rotateY(var(--pc-rotate-x))}
-        .pc-card-shell.entering .pc-card{transition:transform 180ms ease-out}
-        .pc-card .pc-inside > * { pointer-events: none; }
-        .pc-card .pc-inside .pc-user-info, 
-        .pc-card .pc-inside .pc-user-info *, 
+
+        .pc-card-wrapper {
+            perspective: 500px;
+            transform: translate3d(0, 0, .1px);
+            position: relative;
+            touch-action: none;
+            z-index: 10
+        }
+
+        .pc-behind {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y), var(--pc-glow) 0%, transparent 50%);
+            filter: blur(50px) saturate(1.1);
+            opacity: calc(.8*var(--pc-card-opacity));
+            transition: opacity 200ms
+        }
+
+        .pc-card-shell {
+            position: relative;
+            z-index: 1
+        }
+
+        .pc-card {
+            width: 300px;
+            height: 420px;
+            display: grid;
+            border-radius: var(--pc-radius);
+            position: relative;
+            box-shadow: rgba(0, 0, 0, .8) calc((var(--pc-from-left)*10px) - 3px) calc((var(--pc-from-top)*20px) - 6px) 20px -5px;
+            transition: transform 1s ease;
+            transform: translateZ(0) rotateX(0) rotateY(0);
+            background: rgba(0, 0, 0, .9);
+            overflow: hidden;
+            backface-visibility: hidden
+        }
+
+        .pc-card:hover,
+        .pc-card.active {
+            transition: none;
+            transform: translateZ(0) rotateX(var(--pc-rotate-y)) rotateY(var(--pc-rotate-x))
+        }
+
+        .pc-card-shell.entering .pc-card {
+            transition: transform 180ms ease-out
+        }
+
+        .pc-card .pc-inside>* {
+            pointer-events: none;
+        }
+
+        .pc-card .pc-inside .pc-user-info,
+        .pc-card .pc-inside .pc-user-info *,
         .pc-card .pc-inside .pc-content,
-        .pc-card .pc-inside .pc-content * { 
-            pointer-events: auto !important; 
+        .pc-card .pc-inside .pc-content * {
+            pointer-events: auto !important;
         }
-        .pc-inside { display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2rem 0; }
-        .pc-inside{inset:0;position:absolute;background-image:var(--pc-inner-gradient);background-color:rgba(0,0,0,.85)}
-        .pc-shine{mask-image:none;mix-blend-mode:color-dodge;z-index:3;overflow:hidden;
+
+        .pc-inside {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 1.5rem;
+            padding: 2rem 0;
+            inset: 0;
+            position: absolute;
+            background-image: var(--pc-inner-gradient);
+            background-color: rgba(0, 0, 0, .85);
+        }
+
+        .pc-shine {
+            mask-image: none;
+            mix-blend-mode: color-dodge;
+            z-index: 3;
+            overflow: hidden;
             background-image:
-                repeating-linear-gradient(0deg,var(--pc-sp1) 0%,var(--pc-sp2) 16.6%,var(--pc-sp3) 33.3%,var(--pc-sp4) 50%,var(--pc-sp5) 66.6%,var(--pc-sp6) 83.3%,var(--pc-sp1) 100%),
-                radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),hsla(0,0%,0%,.1) 12%,hsla(0,0%,0%,.25) 120%);
-            background-size:500% 500%,200% 200%;background-blend-mode:color,hard-light;
-            filter:brightness(.5) contrast(1.2) saturate(.3) opacity(.4);
-            background-position:0 var(--pc-bg-y),center}
-        .pc-card:hover .pc-shine,.pc-card.active .pc-shine{filter:brightness(.8) contrast(1.4) saturate(.5);animation-play-state:paused}
-        .pc-glare{transform:translate3d(0,0,1.1px);overflow:hidden;z-index:4;
-            background-image:radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y),hsl(248,25%,80%) 12%,hsla(207,40%,30%,.8) 90%);
-            mix-blend-mode:overlay;filter:brightness(.8) contrast(1.2)}
-        .pc-avatar-content{mix-blend-mode:luminosity;overflow:visible;transform:translateZ(2px)}
-        .pc-avatar-initials{width:160px;height:160px;border-radius:50%;display:flex!important;align-items:center;justify-content:center;
-            font-size:4rem;font-weight:700;color:#fff;position:relative;margin-top: 1rem;
-            background:linear-gradient(135deg,#10a37f,#3b82f6);box-shadow:0 8px 32px rgba(0,0,0,.5);
-            border:3px solid rgba(255,255,255,.15); pointer-events: auto !important; }
-        .pc-content:not(.pc-avatar-content){max-height:100%;overflow:hidden;text-align:center;position:relative;z-index:5;
-            transform:translate3d(calc(var(--pc-from-left)*-6px + 3px),calc(var(--pc-from-top)*-6px + 3px),.1px);mix-blend-mode:luminosity}
-        .pc-details{width:100%; display:flex;flex-direction:column; align-items: center; }
-        .pc-details h3{font-weight:700;margin:0;font-size:1.8rem;
-            background-image:linear-gradient(to bottom,#fff,#6f6fbe);-webkit-text-fill-color:transparent;
-            background-clip:text;-webkit-background-clip:text}
-        .pc-details p{font-weight:500;font-size:.9rem;margin:.2rem auto 0;
-            background-image:linear-gradient(to bottom,#fff,#4a4ac0);-webkit-text-fill-color:transparent;
-            background-clip:text;-webkit-background-clip:text}
-        .pc-user-info{position:absolute;bottom:18px;left:18px;right:18px;z-index:10;display:flex!important;
-            align-items:center;justify-content:space-between;background:rgba(255,255,255,.1);
-            backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.15);
-            border-radius:16px;padding:10px 14px;pointer-events:auto}
-        .pc-user-details{display:flex!important;align-items:center;gap:10px}
-        .pc-mini-avatar-initials{width:36px;height:36px;border-radius:50%;display:flex!important;align-items:center;
-            justify-content:center;font-size:1rem;font-weight:700;color:#fff;flex-shrink:0;
-            background:linear-gradient(135deg,#10a37f,#3b82f6);border:1px solid rgba(255,255,255,.2)}
-        .pc-user-text{display:flex!important;flex-direction:column;gap:3px}
-        .pc-handle{font-size:13px;font-weight:500;color:rgba(255,255,255,.9);line-height:1}
-        .pc-status{font-size:12px;color:rgba(255,255,255,.7);line-height:1;display:flex!important;align-items:center;gap:5px}
-        .pc-status-dot{width:7px;height:7px;border-radius:50%;background:#10a37f;display:inline-block;flex-shrink:0;animation:pc-pulse 2s infinite}
-        @keyframes pc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(16,163,127,.7)}50%{box-shadow:0 0 0 4px rgba(16,163,127,0)}}
-        .pc-contact-btn{border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 14px;font-size:12px;
-            font-weight:600;color:rgba(255,255,255,.9);cursor:pointer;transition:all .2s;
-            background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.4);display:flex!important;align-items:center}
-        .pc-contact-btn:hover{background:rgba(239,68,68,.3);transform:translateY(-1px)}
-        .pc-card-wrapper:hover .pc-behind,.pc-card-wrapper.active .pc-behind{--pc-card-opacity:1}
-        .pc-camera-overlay{position:absolute;inset:0;border-radius:50%;display:flex!important;flex-direction:column;align-items:center;
-            justify-content:center;background:rgba(0,0,0,.65);opacity:0;transition:opacity .25s;pointer-events:none}
-        .pc-camera-overlay span { font-size: 10px; font-weight: 600; color: #fff; margin-top: 4px; }
-        .pc-avatar-initials:hover .pc-camera-overlay{opacity:1}
+                repeating-linear-gradient(0deg, var(--pc-sp1) 0%, var(--pc-sp2) 16.6%, var(--pc-sp3) 33.3%, var(--pc-sp4) 50%, var(--pc-sp5) 66.6%, var(--pc-sp6) 83.3%, var(--pc-sp1) 100%),
+                radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y), hsla(0, 0%, 0%, .1) 12%, hsla(0, 0%, 0%, .25) 120%);
+            background-size: 500% 500%, 200% 200%;
+            background-blend-mode: color, hard-light;
+            filter: brightness(.5) contrast(1.2) saturate(.3) opacity(.4);
+            background-position: 0 var(--pc-bg-y), center
+        }
+
+        .pc-card:hover .pc-shine,
+        .pc-card.active .pc-shine {
+            filter: brightness(.8) contrast(1.4) saturate(.5);
+            animation-play-state: paused
+        }
+
+        .pc-glare {
+            transform: translate3d(0, 0, 1.1px);
+            overflow: hidden;
+            z-index: 4;
+            background-image: radial-gradient(circle at var(--pc-pointer-x) var(--pc-pointer-y), hsl(248, 25%, 80%) 12%, hsla(207, 40%, 30%, .8) 90%);
+            mix-blend-mode: overlay;
+            filter: brightness(.8) contrast(1.2)
+        }
+
+        .pc-avatar-content {
+            mix-blend-mode: luminosity;
+            overflow: visible;
+            transform: translateZ(2px)
+        }
+
+        .pc-avatar-initials {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            font-weight: 700;
+            color: #fff;
+            position: relative;
+            margin-top: 1rem;
+            background: linear-gradient(135deg, #10a37f, #3b82f6);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+            border: 3px solid rgba(255, 255, 255, .15);
+            pointer-events: auto !important;
+        }
+
+        .pc-content:not(.pc-avatar-content) {
+            max-height: 100%;
+            overflow: hidden;
+            text-align: center;
+            position: relative;
+            z-index: 5;
+            transform: translate3d(calc(var(--pc-from-left)*-6px + 3px), calc(var(--pc-from-top)*-6px + 3px), .1px);
+            mix-blend-mode: luminosity
+        }
+
+        .pc-details {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pc-details h3 {
+            font-weight: 700;
+            margin: 0;
+            font-size: 1.8rem;
+            background-image: linear-gradient(to bottom, #fff, #6f6fbe);
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            -webkit-background-clip: text
+        }
+
+        .pc-details p {
+            font-weight: 500;
+            font-size: .9rem;
+            margin: .2rem auto 0;
+            background-image: linear-gradient(to bottom, #fff, #4a4ac0);
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            -webkit-background-clip: text
+        }
+
+        .pc-user-info {
+            position: absolute;
+            bottom: 18px;
+            left: 18px;
+            right: 18px;
+            z-index: 10;
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, .1);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 16px;
+            padding: 10px 14px;
+            pointer-events: auto
+        }
+
+        .pc-user-details {
+            display: flex !important;
+            align-items: center;
+            gap: 10px
+        }
+
+        .pc-mini-avatar-initials {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #10a37f, #3b82f6);
+            border: 1px solid rgba(255, 255, 255, .2)
+        }
+
+        .pc-user-text {
+            display: flex !important;
+            flex-direction: column;
+            gap: 3px
+        }
+
+        .pc-handle {
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, .9);
+            line-height: 1
+        }
+
+        .pc-status {
+            font-size: 12px;
+            color: rgba(255, 255, 255, .7);
+            line-height: 1;
+            display: flex !important;
+            align-items: center;
+            gap: 5px
+        }
+
+        .pc-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10a37f;
+            display: inline-block;
+            flex-shrink: 0;
+            animation: pc-pulse 2s infinite
+        }
+
+        @keyframes pc-pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 163, 127, .7)
+            }
+
+            50% {
+                box-shadow: 0 0 0 4px rgba(16, 163, 127, 0)
+            }
+        }
+
+        .pc-contact-btn {
+            border: 1px solid rgba(255, 255, 255, .2);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, .9);
+            cursor: pointer;
+            transition: all .2s;
+            background: rgba(239, 68, 68, .15);
+            border-color: rgba(239, 68, 68, .4);
+            display: flex !important;
+            align-items: center
+        }
+
+        .pc-contact-btn:hover {
+            background: rgba(239, 68, 68, .3);
+            transform: translateY(-1px)
+        }
+
+        .pc-card-wrapper:hover .pc-behind,
+        .pc-card-wrapper.active .pc-behind {
+            --pc-card-opacity: 1
+        }
+
+        .pc-camera-overlay {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, .65);
+            opacity: 0;
+            transition: opacity .25s;
+            pointer-events: none
+        }
+
+        .pc-camera-overlay span {
+            font-size: 10px;
+            font-weight: 600;
+            color: #fff;
+            margin-top: 4px;
+        }
+
+        .pc-avatar-initials:hover .pc-camera-overlay {
+            opacity: 1
+        }
 
         /* Glassmorphic Auth Modal & Form Elements */
         .auth-glass {
@@ -272,6 +568,7 @@
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
         .auth-input {
             width: 100%;
             background: rgba(15, 23, 42, 0.6);
@@ -282,11 +579,13 @@
             outline: none;
             transition: all 0.2s ease;
         }
+
         .auth-input:focus {
             border-color: #10a37f;
             box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.2);
             background: rgba(15, 23, 42, 0.8);
         }
+
         .auth-tab-btn {
             font-size: 0.875rem;
             font-weight: 600;
@@ -296,6 +595,7 @@
             transition: all 0.2s ease;
             cursor: pointer;
         }
+
         .auth-tab-btn.active {
             color: #ffffff;
             border-bottom-color: #10a37f;
@@ -306,26 +606,32 @@
 <body class="flex h-screen w-full">
 
     <!-- Mobile Sidebar Overlay -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden" onclick="toggleSidebar()"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden"
+        onclick="toggleSidebar()"></div>
 
     <!-- Sidebar -->
-    <div id="sidebar" class="fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-sidebar flex flex-col transform -translate-x-full md:translate-x-0 border-r border-border">
+    <div id="sidebar"
+        class="fixed md:static inset-y-0 left-0 z-50 w-[260px] bg-sidebar flex flex-col transform -translate-x-full md:translate-x-0 border-r border-border">
         <div class="p-3 pb-0">
-            <button id="home-btn" onclick="window.location.href='/'" class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-1 text-textSecondary hover:text-white">
+            <button id="home-btn" onclick="window.location.href='/'"
+                class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-1 text-textSecondary hover:text-white">
                 <i data-lucide="home" class="w-4 h-4"></i>
                 <span>Home</span>
             </button>
-            <button id="notebook-btn" onclick="handleBackToNotebook()" class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-1 text-textSecondary hover:text-white">
+            <button id="notebook-btn" onclick="handleBackToNotebook()"
+                class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-1 text-textSecondary hover:text-white">
                 <i data-lucide="book" class="w-4 h-4"></i>
                 <span>Back to Notebook</span>
             </button>
-            <button onclick="createProject()" class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-3 text-textSecondary hover:text-white">
+            <button onclick="createProject()"
+                class="flex items-center gap-3 w-full p-2.5 rounded-md hover:bg-white/5 transition-colors text-sm mb-3 text-textSecondary hover:text-white">
                 <i data-lucide="folder-plus" class="w-4 h-4"></i>
                 <span>Projects</span>
             </button>
         </div>
         <div class="p-3 pt-0">
-            <button onclick="startNewChat()" class="flex items-center gap-3 w-full p-3 rounded-md hover:bg-white/5 transition-colors border border-white/10 text-sm">
+            <button onclick="startNewChat()"
+                class="flex items-center gap-3 w-full p-3 rounded-md hover:bg-white/5 transition-colors border border-white/10 text-sm">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>New chat</span>
                 <i data-lucide="edit-3" class="w-4 h-4 ml-auto"></i>
@@ -335,21 +641,27 @@
         <!-- Search Chats -->
         <div class="px-3 pb-2">
             <div class="relative">
-                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-textSecondary"></i>
-                <input type="text" id="chat-search" placeholder="Search chats..." class="w-full bg-main border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors" onkeyup="searchChats()">
+                <i data-lucide="search"
+                    class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-textSecondary"></i>
+                <input type="text" id="chat-search" placeholder="Search chats..."
+                    class="w-full bg-main border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-accent transition-colors"
+                    onkeyup="searchChats()">
             </div>
         </div>
 
         <!-- Scrollable Sidebar Content -->
         <div class="flex-1 overflow-y-auto px-3 pb-3 space-y-1" id="sidebar-scrollable">
             <div id="projects-section">
-                <div class="text-xs font-semibold text-textSecondary px-3 py-2 mt-2 mb-1 uppercase tracking-wider">Projects</div>
+                <div class="text-xs font-semibold text-textSecondary px-3 py-2 mt-2 mb-1 uppercase tracking-wider">
+                    Projects</div>
                 <div id="projects-list">
                     <!-- Project folders injected here -->
                 </div>
             </div>
 
-            <div id="recent-chats-header" class="text-xs font-semibold text-textSecondary px-3 py-2 mt-4 mb-1 uppercase tracking-wider">Recent Chats</div>
+            <div id="recent-chats-header"
+                class="text-xs font-semibold text-textSecondary px-3 py-2 mt-4 mb-1 uppercase tracking-wider">Recent
+                Chats</div>
             <div id="chat-history">
                 <!-- History items will be injected here -->
             </div>
@@ -363,27 +675,37 @@
 
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0 relative bg-main overflow-hidden" id="main-content-wrapper">
-        
+
         <!-- Living Background Elements -->
         <div class="absolute inset-0 pointer-events-none z-0">
-            <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
-            <div class="absolute top-[40%] -right-[20%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[150px] mix-blend-screen" style="animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;"></div>
-            <div class="absolute -bottom-[20%] left-[20%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px] mix-blend-screen animate-pulse"></div>
-            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-overlay"></div>
+            <div
+                class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-accent/10 rounded-full blur-[120px] mix-blend-screen animate-pulse">
+            </div>
+            <div class="absolute top-[40%] -right-[20%] w-[60%] h-[60%] bg-blue-500/10 rounded-full blur-[150px] mix-blend-screen"
+                style="animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;"></div>
+            <div
+                class="absolute -bottom-[20%] left-[20%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[100px] mix-blend-screen animate-pulse">
+            </div>
+            <div
+                class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-overlay">
+            </div>
         </div>
-        
+
         <!-- Header -->
-        <header class="glass-header sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border">
+        <header
+            class="glass-header sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border">
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="md:hidden text-textSecondary hover:text-white">
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
-                <h1 class="text-lg font-semibold text-textSecondary md:text-white text-center md:text-left mx-auto md:mx-0 absolute left-1/2 transform -translate-x-1/2 md:static md:translate-x-0 flex items-center gap-2">
+                <h1
+                    class="text-lg font-semibold text-textSecondary md:text-white text-center md:text-left mx-auto md:mx-0 absolute left-1/2 transform -translate-x-1/2 md:static md:translate-x-0 flex items-center gap-2">
                     <span class="text-xl font-bold text-accent">∞</span> Infinity Intelligence
                 </h1>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="openChatShareModal()" id="chat-share-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent hover:bg-accentHover text-white shadow-md transition-all">
+                <button onclick="openChatShareModal()" id="chat-share-btn"
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent hover:bg-accentHover text-white shadow-md transition-all">
                     <i data-lucide="share-2" class="w-4 h-4"></i>
                     <span>Share Workspace</span>
                 </button>
@@ -392,23 +714,29 @@
 
         <!-- Chat Area -->
         <div class="flex-1 overflow-y-auto w-full relative scroll-smooth" id="chatbox">
-            
+
             <div class="max-w-3xl mx-auto pt-10 pb-32 px-4 w-full flex flex-col gap-6" id="chat-content">
-                
+
                 <!-- Empty State Suggestions -->
-                <div id="empty-state" class="flex flex-col items-center justify-center mt-12 mb-10 w-full animate-fade-in">
+                <div id="empty-state"
+                    class="flex flex-col items-center justify-center mt-12 mb-10 w-full animate-fade-in">
                     <!-- Animated AI Orb -->
                     <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
                         <div class="absolute inset-0 rounded-full bg-accent/20 blur-xl animate-pulse"></div>
-                        <div class="absolute inset-2 rounded-full border-2 border-accent/40 animate-[spin_4s_linear_infinite]"></div>
-                        <div class="absolute inset-4 rounded-full border-2 border-dashed border-blue-400/40 animate-[spin_6s_linear_infinite_reverse]"></div>
-                        <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-accent to-blue-500 shadow-[0_0_20px_rgba(0,255,255,0.6)] flex items-center justify-center relative z-10">
+                        <div
+                            class="absolute inset-2 rounded-full border-2 border-accent/40 animate-[spin_4s_linear_infinite]">
+                        </div>
+                        <div
+                            class="absolute inset-4 rounded-full border-2 border-dashed border-blue-400/40 animate-[spin_6s_linear_infinite_reverse]">
+                        </div>
+                        <div
+                            class="w-12 h-12 rounded-full bg-gradient-to-tr from-accent to-blue-500 shadow-[0_0_20px_rgba(0,255,255,0.6)] flex items-center justify-center relative z-10">
                             <span class="text-2xl text-white font-bold pb-1">∞</span>
                         </div>
                     </div>
-                    
+
                     <h2 class="text-2xl font-bold mb-8 text-center text-white">How can Infinity Intelligence help?</h2>
-                    
+
 
                 </div>
 
@@ -416,40 +744,44 @@
         </div>
 
         <!-- Input Area -->
-        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-main via-main to-transparent pt-10 pb-6 px-4 z-20">
+        <div
+            class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-main via-main to-transparent pt-10 pb-6 px-4 z-20">
             <div class="max-w-3xl mx-auto relative">
-                <div class="bg-card border border-border rounded-2xl p-2 shadow-xl flex flex-col gap-1 transition-all focus-within:border-gray-500 focus-within:shadow-2xl">
-                    
+                <div
+                    class="bg-card border border-border rounded-2xl p-2 shadow-xl flex flex-col gap-1 transition-all focus-within:border-gray-500 focus-within:shadow-2xl">
+
 
 
                     <!-- Attachment Preview Container -->
                     <div id="attachment-preview" class="hidden px-1 pt-1 pb-1 flex flex-wrap gap-2 w-full"></div>
 
                     <div class="flex items-end gap-2 w-full">
-                    <input type="file" id="fileInput" class="hidden" accept=".txt,.csv,.json,.md,.pdf,.doc,.docx,image/*,.xlsx,.xls" onchange="handleFileUpload(event)" />
-                    <button onclick="document.getElementById('fileInput').click()" class="p-2 text-textSecondary hover:text-white transition-colors rounded-lg flex-shrink-0 mb-1" title="Attach file">
-                        <i data-lucide="paperclip" class="w-5 h-5"></i>
-                    </button>
-                    
-                    <textarea 
-                        id="messageInput" 
-                        class="w-full bg-transparent text-white placeholder-textSecondary outline-none text-base py-2.5 px-1 resize-none"
-                        placeholder="Message Infinity Intelligence..."
-                        rows="1"
-                        oninput="autoResize(this)"
-                    ></textarea>
+                        <input type="file" id="fileInput" class="hidden"
+                            accept=".txt,.csv,.json,.md,.pdf,.doc,.docx,image/*,.xlsx,.xls"
+                            onchange="handleFileUpload(event)" />
+                        <button onclick="document.getElementById('fileInput').click()"
+                            class="p-2 text-textSecondary hover:text-white transition-colors rounded-lg flex-shrink-0 mb-1"
+                            title="Attach file">
+                            <i data-lucide="paperclip" class="w-5 h-5"></i>
+                        </button>
 
-                    <button class="p-2 text-textSecondary hover:text-white transition-colors rounded-lg flex-shrink-0 mb-1" title="Voice input">
-                        <i data-lucide="mic" class="w-5 h-5"></i>
-                    </button>
+                        <textarea id="messageInput"
+                            class="w-full bg-transparent text-white placeholder-textSecondary outline-none text-base py-2.5 px-1 resize-none"
+                            placeholder="Message Infinity Intelligence..." rows="1"
+                            oninput="autoResize(this)"></textarea>
 
-                    <button 
-                        id="sendButton" 
-                        class="p-2 bg-white text-black hover:bg-gray-200 transition-all rounded-xl flex-shrink-0 mb-1 disabled:opacity-50 disabled:bg-border disabled:text-textSecondary disabled:cursor-not-allowed group"
-                        disabled
-                    >
-                        <span class="text-2xl font-bold leading-none mb-1 text-black flex items-center justify-center">∞</span>
-                    </button>
+                        <button
+                            class="p-2 text-textSecondary hover:text-white transition-colors rounded-lg flex-shrink-0 mb-1"
+                            title="Voice input">
+                            <i data-lucide="mic" class="w-5 h-5"></i>
+                        </button>
+
+                        <button id="sendButton"
+                            class="p-2 bg-white text-black hover:bg-gray-200 transition-all rounded-xl flex-shrink-0 mb-1 disabled:opacity-50 disabled:bg-border disabled:text-textSecondary disabled:cursor-not-allowed group"
+                            disabled>
+                            <span
+                                class="text-2xl font-bold leading-none mb-1 text-black flex items-center justify-center">∞</span>
+                        </button>
                     </div> <!-- Close flex row -->
                 </div>
                 <div class="text-center text-xs text-textSecondary mt-3">
@@ -462,46 +794,68 @@
 
     <!-- Modals -->
     <!-- Collaborative Share Modal -->
-    <div id="chat-share-modal" class="fixed inset-0 bg-black/70 z-[99999] hidden flex items-center justify-center backdrop-blur-md transition-all duration-300" onclick="closeChatShareModal(event)">
-        <div class="bg-[#0f172a]/95 border border-white/10 rounded-2xl p-6 w-full max-w-lg m-4 shadow-2xl relative overflow-hidden" onclick="event.stopPropagation()">
+    <div id="chat-share-modal"
+        class="fixed inset-0 bg-black/70 z-[99999] hidden flex items-center justify-center backdrop-blur-md transition-all duration-300"
+        onclick="closeChatShareModal(event)">
+        <div class="bg-[#0f172a]/95 border border-white/10 rounded-2xl p-6 w-full max-w-lg m-4 shadow-2xl relative overflow-hidden"
+            onclick="event.stopPropagation()">
             <!-- Glowing Background Orbs -->
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-accent/20 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-accent/20 rounded-full blur-2xl pointer-events-none">
+            </div>
+            <div
+                class="absolute -bottom-12 -left-12 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none">
+            </div>
 
-            <button onclick="document.getElementById('chat-share-modal').classList.add('hidden')" class="absolute top-4 right-4 text-textSecondary hover:text-white transition-colors">
+            <button onclick="document.getElementById('chat-share-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-textSecondary hover:text-white transition-colors">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
             <h3 class="text-xl font-bold mb-1 flex items-center gap-2">
                 <i data-lucide="users" class="w-5 h-5 text-accent"></i> Collaborators &amp; Sharing
             </h3>
-            <p class="text-xs text-textSecondary mb-6">Invite team members to chat with Infinity Intelligence in real-time!</p>
+            <p class="text-xs text-textSecondary mb-6">Invite team members to chat with Infinity Intelligence in
+                real-time!</p>
 
             <!-- Tabs -->
             <div class="flex border-b border-white/10 mb-5">
-                <button onclick="switchChatShareTab('link')" id="tab-btn-link" class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-white">Share Link</button>
-                <button onclick="switchChatShareTab('members')" id="tab-btn-members" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-textSecondary hover:text-white">Active (3)</button>
-                <button onclick="switchChatShareTab('ai')" id="tab-btn-ai" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-textSecondary hover:text-white">AI Co-Working</button>
+                <button onclick="switchChatShareTab('link')" id="tab-btn-link"
+                    class="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-white">Share Link</button>
+                <button onclick="switchChatShareTab('members')" id="tab-btn-members"
+                    class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-textSecondary hover:text-white">Active
+                    (3)</button>
+                <button onclick="switchChatShareTab('ai')" id="tab-btn-ai"
+                    class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-textSecondary hover:text-white">AI
+                    Co-Working</button>
             </div>
 
             <!-- Tab Content: Link -->
             <div id="chat-share-tab-link" class="space-y-5">
                 <!-- Permission Selector -->
                 <div>
-                    <label class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 block">Link Access Permissions</label>
+                    <label class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 block">Link
+                        Access Permissions</label>
                     <div class="grid grid-cols-3 gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
-                        <button onclick="setChatSharePermission('view')" id="chat-perm-view" class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary hover:text-white bg-transparent">View Only</button>
-                        <button onclick="setChatSharePermission('comment')" id="chat-perm-comment" class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary hover:text-white bg-transparent">Comment</button>
-                        <button onclick="setChatSharePermission('edit')" id="chat-perm-edit" class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-white bg-accent shadow-md">Live Edit</button>
+                        <button onclick="setChatSharePermission('view')" id="chat-perm-view"
+                            class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary hover:text-white bg-transparent">View
+                            Only</button>
+                        <button onclick="setChatSharePermission('comment')" id="chat-perm-comment"
+                            class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-textSecondary hover:text-white bg-transparent">Comment</button>
+                        <button onclick="setChatSharePermission('edit')" id="chat-perm-edit"
+                            class="py-2 px-1 text-xs font-semibold rounded-lg transition-all text-white bg-accent shadow-md">Live
+                            Edit</button>
                     </div>
                 </div>
 
                 <!-- Invite Link Box -->
                 <div>
-                    <label class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 block">Secure Workspace Access Link</label>
+                    <label class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 block">Secure
+                        Workspace Access Link</label>
                     <div class="flex gap-2">
-                        <input type="text" id="chat-share-url-input" readonly class="flex-1 bg-main border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white outline-none" />
-                        <button onclick="copyChatShareUrl()" class="px-4 bg-white hover:bg-gray-200 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors">
+                        <input type="text" id="chat-share-url-input" readonly
+                            class="flex-1 bg-main border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white outline-none" />
+                        <button onclick="copyChatShareUrl()"
+                            class="px-4 bg-white hover:bg-gray-200 text-black text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors">
                             <i data-lucide="copy" class="w-3.5 h-3.5"></i> <span>Copy</span>
                         </button>
                     </div>
@@ -509,12 +863,14 @@
 
                 <!-- QR Code Block -->
                 <div class="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-xl">
-                    <div class="w-20 h-20 bg-white p-1 rounded-lg flex-shrink-0 flex items-center justify-center shadow-lg">
+                    <div
+                        class="w-20 h-20 bg-white p-1 rounded-lg flex-shrink-0 flex items-center justify-center shadow-lg">
                         <img id="chat-share-qr" src="" alt="QR" class="w-full h-full object-contain" />
                     </div>
                     <div>
                         <div class="text-xs font-bold text-white mb-1">Scan to Join Live Chat</div>
-                        <div class="text-[11px] text-textSecondary leading-relaxed">Instantly sync your session with your mobile device or open on another device to work simultaneously!</div>
+                        <div class="text-[11px] text-textSecondary leading-relaxed">Instantly sync your session with
+                            your mobile device or open on another device to work simultaneously!</div>
                     </div>
                 </div>
             </div>
@@ -524,47 +880,61 @@
                 <div class="max-h-48 overflow-y-auto space-y-3 pr-1">
                     <div class="flex items-center justify-between bg-white/5 p-2.5 border border-white/10 rounded-xl">
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-white text-xs">S</div>
+                            <div
+                                class="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-white text-xs">
+                                S</div>
                             <div>
-                                <div class="text-xs font-bold text-white" id="chat-share-owner-name">Sharma (Owner)</div>
+                                <div class="text-xs font-bold text-white" id="chat-share-owner-name">Sharma (Owner)
+                                </div>
                                 <div class="text-[10px] text-accent">Active Now</div>
                             </div>
                         </div>
-                        <span class="text-[10px] bg-accent/20 text-accent font-semibold px-2.5 py-0.5 rounded-full uppercase">Owner</span>
+                        <span
+                            class="text-[10px] bg-accent/20 text-accent font-semibold px-2.5 py-0.5 rounded-full uppercase">Owner</span>
                     </div>
 
                     <div class="flex items-center justify-between bg-white/5 p-2.5 border border-white/10 rounded-xl">
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white text-xs">G</div>
+                            <div
+                                class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white text-xs">
+                                G</div>
                             <div>
                                 <div class="text-xs font-bold text-white">Guest Contributor</div>
                                 <div class="text-[10px] text-textSecondary">Real-time joined</div>
                             </div>
                         </div>
-                        <span class="text-[10px] bg-blue-500/20 text-blue-400 font-semibold px-2.5 py-0.5 rounded-full uppercase">Editor</span>
+                        <span
+                            class="text-[10px] bg-blue-500/20 text-blue-400 font-semibold px-2.5 py-0.5 rounded-full uppercase">Editor</span>
                     </div>
 
                     <div class="flex items-center justify-between bg-white/5 p-2.5 border border-white/10 rounded-xl">
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center font-bold text-white text-xs">AI</div>
+                            <div
+                                class="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center font-bold text-white text-xs">
+                                AI</div>
                             <div>
                                 <div class="text-xs font-bold text-white">Infinity Co-Pilot</div>
                                 <div class="text-[10px] text-purple-400">Autonomous Assistant</div>
                             </div>
                         </div>
-                        <span class="text-[10px] bg-purple-500/20 text-purple-400 font-semibold px-2.5 py-0.5 rounded-full uppercase">AI Bot</span>
+                        <span
+                            class="text-[10px] bg-purple-500/20 text-purple-400 font-semibold px-2.5 py-0.5 rounded-full uppercase">AI
+                            Bot</span>
                     </div>
                 </div>
 
                 <!-- Recent Activities -->
                 <div class="border-t border-white/10 pt-4">
-                    <div class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <div
+                        class="text-[10px] font-bold text-textSecondary uppercase tracking-wider mb-2 flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span> Chat Activity Logs
                     </div>
                     <div class="text-[11px] text-textSecondary space-y-1.5 pl-2 border-l border-white/10">
-                        <div>• <span class="text-white font-medium">Guest Contributor</span> joined collaborative chat workspace.</div>
+                        <div>• <span class="text-white font-medium">Guest Contributor</span> joined collaborative chat
+                            workspace.</div>
                         <div>• <span class="text-white font-medium">Sharma</span> asked a reasoning code question.</div>
-                        <div>• <span class="text-white font-medium">Infinity Co-Pilot</span> initiated streaming response.</div>
+                        <div>• <span class="text-white font-medium">Infinity Co-Pilot</span> initiated streaming
+                            response.</div>
                     </div>
                 </div>
             </div>
@@ -575,17 +945,23 @@
                     <h4 class="text-xs font-bold text-accent flex items-center gap-1">
                         <i data-lucide="sparkles" class="w-4 h-4"></i> AI Chat Workgroup Recaps
                     </h4>
-                    <p class="text-[11px] text-textSecondary leading-relaxed">Generate autonomous summaries, action items, or technical specs directly from your live collaborative chat history.</p>
-                    
-                    <button onclick="generateChatRecap()" class="w-full py-2.5 rounded-xl text-xs font-bold bg-white text-black hover:bg-gray-200 transition-all flex items-center justify-center gap-1.5 shadow-md">
-                        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> <span>Extract Chat Highlights &amp; Tasks</span>
+                    <p class="text-[11px] text-textSecondary leading-relaxed">Generate autonomous summaries, action
+                        items, or technical specs directly from your live collaborative chat history.</p>
+
+                    <button onclick="generateChatRecap()"
+                        class="w-full py-2.5 rounded-xl text-xs font-bold bg-white text-black hover:bg-gray-200 transition-all flex items-center justify-center gap-1.5 shadow-md">
+                        <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> <span>Extract Chat Highlights &amp;
+                            Tasks</span>
                     </button>
 
                     <!-- Generated output cache -->
-                    <div id="chat-recap-result" class="hidden bg-main border border-white/5 p-3 rounded-lg text-[11px] text-textSecondary max-h-32 overflow-y-auto space-y-2">
+                    <div id="chat-recap-result"
+                        class="hidden bg-main border border-white/5 p-3 rounded-lg text-[11px] text-textSecondary max-h-32 overflow-y-auto space-y-2">
                         <div class="text-white font-bold mb-1 border-b border-white/5 pb-1">AI WORKGROUP LOGS</div>
-                        <div><strong>Key Takeaway:</strong> Developing a highly responsive, real-time collaboration module.</div>
-                        <div><strong>Next Steps:</strong> Integrate Socket.io connections, center canvases, and build without compilation failures.</div>
+                        <div><strong>Key Takeaway:</strong> Developing a highly responsive, real-time collaboration
+                            module.</div>
+                        <div><strong>Next Steps:</strong> Integrate Socket.io connections, center canvases, and build
+                            without compilation failures.</div>
                     </div>
                 </div>
             </div>
@@ -595,10 +971,13 @@
     <div id="rename-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center">
         <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl">
             <h3 class="text-lg font-medium mb-4">Rename Chat</h3>
-            <input type="text" id="rename-input" class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent mb-6">
+            <input type="text" id="rename-input"
+                class="w-full bg-main border border-border rounded-lg p-3 text-white outline-none focus:border-accent mb-6">
             <div class="flex justify-end gap-3">
-                <button onclick="closeModal('rename-modal')" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">Cancel</button>
-                <button id="save-rename-btn" class="px-4 py-2 bg-accent hover:bg-accentHover rounded-lg text-sm font-medium transition-colors">Save</button>
+                <button onclick="closeModal('rename-modal')"
+                    class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">Cancel</button>
+                <button id="save-rename-btn"
+                    class="px-4 py-2 bg-accent hover:bg-accentHover rounded-lg text-sm font-medium transition-colors">Save</button>
             </div>
         </div>
     </div>
@@ -606,10 +985,13 @@
     <div id="delete-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center">
         <div class="bg-card border border-border rounded-xl p-6 w-full max-w-sm m-4 shadow-2xl">
             <h3 class="text-lg font-medium mb-2">Delete chat?</h3>
-            <p class="text-textSecondary text-sm mb-6">This will delete the chat history for this session. This action cannot be undone.</p>
+            <p class="text-textSecondary text-sm mb-6">This will delete the chat history for this session. This action
+                cannot be undone.</p>
             <div class="flex justify-end gap-3">
-                <button onclick="closeModal('delete-modal')" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">Cancel</button>
-                <button id="confirm-delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">Delete</button>
+                <button onclick="closeModal('delete-modal')"
+                    class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/5 transition-colors">Cancel</button>
+                <button id="confirm-delete-btn"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">Delete</button>
             </div>
         </div>
     </div>
@@ -617,99 +999,245 @@
     <!-- Auth Modal - Production Ready Glassmorphic Layout -->
     <div id="auth-modal" class="fixed inset-0 bg-black/70 z-[99999] hidden flex items-center justify-center p-4">
         <div class="auth-glass rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
-            <button onclick="closeModal('auth-modal')" class="absolute top-4 right-4 text-textSecondary hover:text-white transition-colors">
+            <button onclick="closeModal('auth-modal')"
+                class="absolute top-4 right-4 text-textSecondary hover:text-white transition-colors">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
-            
+
             <!-- Logo & Title -->
             <div class="flex flex-col items-center mb-6">
-                <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center text-xl font-bold text-white shadow-lg mb-2">∞</div>
+                <div
+                    class="w-12 h-12 rounded-full bg-gradient-to-tr from-accent to-blue-500 flex items-center justify-center text-xl font-bold text-white shadow-lg mb-2">
+                    ∞</div>
                 <h3 class="text-xl font-bold text-white tracking-tight" id="auth-modal-title">Infinity AI</h3>
-                <p class="text-xs text-textSecondary mt-0.5" id="auth-modal-subtitle">Journaling & Collaboration Workspace</p>
+                <p class="text-xs text-textSecondary mt-0.5" id="auth-modal-subtitle">Journaling & Collaboration
+                    Workspace</p>
             </div>
 
             <!-- Error Banner -->
-            <div id="auth-error" class="hidden bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg mb-4 text-center"></div>
-            
+            <div id="auth-error"
+                class="hidden bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg mb-4 text-center">
+            </div>
+
             <!-- Success Banner -->
-            <div id="auth-success" class="hidden bg-accent/10 border border-accent/20 text-accent text-xs p-3 rounded-lg mb-4 text-center"></div>
+            <div id="auth-success"
+                class="hidden bg-accent/10 border border-accent/20 text-accent text-xs p-3 rounded-lg mb-4 text-center">
+            </div>
 
             <!-- Forms Container -->
             <div class="space-y-4">
-                
+
                 <!-- LOGIN FORM -->
                 <div id="form-login" class="space-y-3">
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail
+                            Address</label>
                         <input type="email" id="login-email" placeholder="name@gmail.com" class="auth-input" />
                     </div>
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Password</label>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label
+                                class="text-[10px] font-semibold text-textSecondary block uppercase tracking-wider">Password</label>
+                            <button type="button" onclick="switchAuthMode('forgot')"
+                                class="text-[10px] text-accent hover:underline font-semibold">Forgot Password?</button>
+                        </div>
                         <div class="relative">
-                            <input type="password" id="login-password" placeholder="••••••••" class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                            <input type="password" id="login-password" placeholder="••••••••"
+                                class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('login-password')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
                                 <i data-lucide="eye" class="w-4 h-4" id="login-password-eye"></i>
                             </button>
                         </div>
                     </div>
-                    <button id="login-btn" onclick="handlePasswordLogin()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
-                        <span id="login-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                    <button id="login-btn" onclick="handlePasswordLogin()"
+                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="login-btn-spinner"
+                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
                         <span id="login-btn-text">Login</span>
                     </button>
                     <p class="text-center text-xs text-textSecondary mt-4">
-                        Don't have an account? <button type="button" onclick="switchAuthMode('signup')" class="text-accent hover:underline font-semibold">Sign Up</button>
+                        Don't have an account? <button type="button" onclick="switchAuthMode('signup')"
+                            class="text-accent hover:underline font-semibold">Sign Up</button>
                     </p>
                 </div>
 
                 <!-- SIGNUP FORM -->
                 <div id="form-signup" class="space-y-3 hidden">
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Full Name</label>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Full
+                            Name</label>
                         <input type="text" id="signup-name" placeholder="John Doe" class="auth-input" />
                     </div>
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail Address</label>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail
+                            Address</label>
                         <input type="email" id="signup-email" placeholder="name@gmail.com" class="auth-input" />
                     </div>
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Password</label>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Password</label>
                         <div class="relative">
-                            <input type="password" id="signup-password" oninput="checkSignupPasswordStrength(this.value)" placeholder="••••••••" class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('signup-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                            <input type="password" id="signup-password"
+                                oninput="checkSignupPasswordStrength(this.value)" placeholder="••••••••"
+                                class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('signup-password')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
                                 <i data-lucide="eye" class="w-4 h-4" id="signup-password-eye"></i>
                             </button>
                         </div>
                         <div id="signup-password-feedback" class="text-[10px] mt-1 text-red-400 hidden"></div>
                     </div>
                     <div>
-                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm Password</label>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm
+                            Password</label>
                         <div class="relative">
-                            <input type="password" id="signup-confirm-password" placeholder="••••••••" class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('signup-confirm-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                            <input type="password" id="signup-confirm-password" placeholder="••••••••"
+                                class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('signup-confirm-password')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
                                 <i data-lucide="eye" class="w-4 h-4" id="signup-confirm-password-eye"></i>
                             </button>
                         </div>
                     </div>
-                    <button id="signup-btn" onclick="handleSignupSubmit()" class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
-                        <span id="signup-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="signup-btn-text">Create Account</span>
+                    <button id="signup-btn" onclick="handleSignupSubmit()"
+                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="signup-btn-spinner"
+                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="signup-btn-text">Send Verification Code</span>
                     </button>
                     <p class="text-center text-xs text-textSecondary mt-4">
-                        Already have an account? <button type="button" onclick="switchAuthMode('login')" class="text-accent hover:underline font-semibold">Login</button>
+                        Already have an account? <button type="button" onclick="switchAuthMode('login')"
+                            class="text-accent hover:underline font-semibold">Login</button>
                     </p>
+                </div>
+
+                <!-- FORGOT PASSWORD FORM -->
+                <div id="form-forgot" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset
+                        code.</p>
+                    <div>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail
+                            Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@gmail.com" class="auth-input" />
+                    </div>
+                    <button id="forgot-btn" onclick="handleForgotSubmit()"
+                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="forgot-btn-spinner"
+                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="forgot-btn-text">Send Reset Code</span>
+                    </button>
+                    <button type="button" onclick="switchAuthMode('login')"
+                        class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Back to Login
+                    </button>
+                </div>
+
+                <!-- OTP VERIFICATION - SIGNUP -->
+                <div id="form-otp-signup" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary text-center mb-2">
+                        Verification code sent to <span id="otp-signup-sent-email"
+                            class="text-white font-semibold"></span>
+                    </p>
+                    <div>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit
+                            Code</label>
+                        <input type="text" id="signup-otp" placeholder="••••••"
+                            class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
+                    </div>
+                    <button id="otp-signup-btn" onclick="completeSignup()"
+                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
+                        <span id="otp-signup-btn-spinner"
+                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="otp-signup-btn-text">Verify &amp; Create Account</span>
+                    </button>
+                    <p class="text-xs text-textSecondary text-center mt-3" id="signup-resend-container">
+                        Didn't receive code? <button type="button" onclick="resendOtp('signup')" id="signup-resend-btn"
+                            class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold"
+                            disabled>Resend in 60s</button>
+                    </p>
+                    <button type="button" onclick="switchAuthMode('signup')"
+                        class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Change Email
+                    </button>
+                </div>
+
+                <!-- OTP VERIFICATION & RESET - FORGOT PASSWORD -->
+                <div id="form-otp-forgot" class="space-y-3 hidden">
+                    <p class="text-xs text-textSecondary text-center mb-2">
+                        Reset code sent to <span id="otp-forgot-sent-email" class="text-white font-semibold"></span>
+                    </p>
+                    <div>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit
+                            Code</label>
+                        <input type="text" id="forgot-otp" placeholder="••••••"
+                            class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
+                    </div>
+                    <div>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Create
+                            New Password</label>
+                        <div class="relative">
+                            <input type="password" id="forgot-password"
+                                oninput="checkForgotPasswordStrength(this.value)" placeholder="••••••••"
+                                class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('forgot-password')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="forgot-password-eye"></i>
+                            </button>
+                        </div>
+                        <div id="forgot-password-feedback" class="text-[10px] mt-1 text-red-400 hidden"></div>
+                    </div>
+                    <div>
+                        <label
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm
+                            New Password</label>
+                        <div class="relative">
+                            <input type="password" id="forgot-confirm-password" placeholder="••••••••"
+                                class="auth-input pr-10" />
+                            <button type="button" onclick="togglePasswordVisibility('forgot-confirm-password')"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
+                                <i data-lucide="eye" class="w-4 h-4" id="forgot-confirm-password-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="otp-forgot-btn" onclick="completeReset()"
+                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
+                        <span id="otp-forgot-btn-spinner"
+                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="otp-forgot-btn-text">Reset Password &amp; Login</span>
+                    </button>
+                    <p class="text-xs text-textSecondary text-center mt-3" id="forgot-resend-container">
+                        Didn't receive code? <button type="button" onclick="resendOtp('forgot')" id="forgot-resend-btn"
+                            class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold"
+                            disabled>Resend in 60s</button>
+                    </p>
+                    <button type="button" onclick="switchAuthMode('forgot')"
+                        class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
+                        ← Change Email
+                    </button>
                 </div>
 
             </div>
 
             <!-- Hidden Custom Backend URL field to satisfy existing codebase structure -->
             <input type="hidden" id="auth-backend-url" />
-            
-            <p class="text-center text-[10px] text-textSecondary mt-4">By continuing, you agree to Infinity AI's terms.</p>
+
+            <p class="text-center text-[10px] text-textSecondary mt-4">By continuing, you agree to Infinity AI's terms.
+            </p>
         </div>
     </div>
 
     <!-- Profile Card Modal -->
-    <div id="profile-modal" class="fixed inset-0 bg-black/60 z-[99999] hidden flex items-center justify-center" onclick="closeProfileModal(event)">
+    <div id="profile-modal" class="fixed inset-0 bg-black/60 z-[99999] hidden flex items-center justify-center"
+        onclick="closeProfileModal(event)">
         <div class="pc-card-wrapper" id="pc-wrapper">
             <div class="pc-behind"></div>
             <div class="pc-card-shell" id="pc-shell">
@@ -718,15 +1246,19 @@
                         <div class="pc-shine"></div>
                         <div class="pc-glare"></div>
                         <div class="pc-content pc-avatar-content">
-                            <div class="pc-avatar-initials" id="pc-avatar" onclick="document.getElementById('pc-pic-input').click()" title="Click to upload profile picture">
-                                <img id="pc-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0" />
+                            <div class="pc-avatar-initials" id="pc-avatar"
+                                onclick="document.getElementById('pc-pic-input').click()"
+                                title="Click to upload profile picture">
+                                <img id="pc-avatar-img" src="" alt=""
+                                    style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;position:absolute;inset:0" />
                                 <span id="pc-avatar-letter"></span>
                                 <div class="pc-camera-overlay">
                                     <i data-lucide="camera" class="w-6 h-6"></i>
                                     <span>CHANGE</span>
                                 </div>
                             </div>
-                            <input type="file" id="pc-pic-input" accept="image/*" style="display:none" onchange="handleProfilePicUpload(event)" />
+                            <input type="file" id="pc-pic-input" accept="image/*" style="display:none"
+                                onchange="handleProfilePicUpload(event)" />
                         </div>
                         <div class="pc-content">
                             <div class="pc-details">
@@ -734,14 +1266,20 @@
                                 <p id="pc-title">Infinity AI Member</p>
                             </div>
                         </div>
-                        <div class="pc-content w-full px-8 mb-2" style="transform:translate3d(0,0,.1px); pointer-events: auto !important;">
-                            <label class="text-[10px] text-textSecondary block mb-1 text-left uppercase tracking-wider font-semibold">Backend API URL</label>
-                            <input type="text" id="pc-backend-url" class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accent text-center" onchange="updateBackendUrlFromProfile(this.value)" />
+                        <div class="pc-content w-full px-8 mb-2"
+                            style="display: none; transform:translate3d(0,0,.1px); pointer-events: auto !important;">
+                            <label
+                                class="text-[10px] text-textSecondary block mb-1 text-left uppercase tracking-wider font-semibold">Backend
+                                API URL</label>
+                            <input type="text" id="pc-backend-url"
+                                class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-accent text-center"
+                                onchange="updateBackendUrlFromProfile(this.value)" />
                         </div>
                         <div class="pc-user-info">
                             <div class="pc-user-details">
                                 <div class="pc-mini-avatar-initials" id="pc-mini-avatar">
-                                    <img id="pc-mini-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%" />
+                                    <img id="pc-mini-avatar-img" src="" alt=""
+                                        style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%" />
                                     <span id="pc-mini-avatar-letter"></span>
                                 </div>
                                 <div class="pc-user-text">
@@ -763,7 +1301,7 @@
 
         // Configure Marked.js for Highlight.js
         marked.setOptions({
-            highlight: function(code, lang) {
+            highlight: function (code, lang) {
                 const language = hljs.getLanguage(lang) ? lang : 'plaintext';
                 return hljs.highlight(code, { language }).value;
             },
@@ -779,13 +1317,13 @@
         const sidebarOverlay = document.getElementById("sidebar-overlay");
         const sidebar = document.getElementById("sidebar");
         const chatHistoryContainer = document.getElementById("chat-history");
-        
+
         let receiving = false;
         let activeChatId = null;
         let authToken = localStorage.getItem('infinity_token');
         let userEmail = localStorage.getItem('infinity_email');
         let userName = localStorage.getItem('infinity_name') || '';
-        
+
         let chatHistoryDb = JSON.parse(localStorage.getItem('infinity_ai_history')) || {};
         let projectsDb = JSON.parse(localStorage.getItem('infinity_projects')) || [];
         let activeProject = null;
@@ -806,7 +1344,7 @@
             // Ignore cross-origin error
         }
 
-        let rawApi = parentApiUrl || 
+        let rawApi = parentApiUrl ||
             ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? 'http://localhost:5000/api'
                 : (localStorage.getItem('infinity_backend_url') || 'https://infinity-book-1.onrender.com/api'));
@@ -826,7 +1364,7 @@
         }
 
         normalizeAndSetApiUrl(rawApi);
-        
+
         let guestChatCount = 0;
 
         // Startup logic
@@ -837,7 +1375,7 @@
             const sharedAccess = urlParams.get('access');
 
             updateAuthUI();
-            
+
             if (sharedChatId) {
                 activeChatId = sharedChatId;
                 if (!chatHistoryDb[activeChatId]) {
@@ -854,7 +1392,7 @@
 
             if (sharedChatId) {
                 loadChat(sharedChatId);
-                
+
                 // If sharing access is 'view' or 'comment', block typing inside chatbot!
                 if (sharedAccess === 'view' || sharedAccess === 'comment') {
                     messageInput.placeholder = `Workspace locked (Shared as ${sharedAccess === 'view' ? 'View-Only' : 'Comment-Mode'})`;
@@ -910,7 +1448,7 @@
         window.openAuthModal = () => {
             document.getElementById('auth-modal').classList.remove('hidden');
             switchAuthMode('login');
-            
+
             let parentApiUrl = null;
             try {
                 if (window.parent && window.parent.VITE_API_URL) {
@@ -919,13 +1457,13 @@
             } catch (e) {
                 // Ignore
             }
-            
+
             const backendInput = document.getElementById('auth-backend-url');
             if (backendInput) {
-                backendInput.value = localStorage.getItem('infinity_backend_url') || 
+                backendInput.value = localStorage.getItem('infinity_backend_url') ||
                     parentApiUrl ||
-                    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                        ? 'http://localhost:5000/api' 
+                    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                        ? 'http://localhost:5000/api'
                         : 'https://infinity-book-1.onrender.com/api');
             }
         };
@@ -1018,26 +1556,28 @@
 
             const setVars = (px, py) => {
                 const w = shell.clientWidth || 300, h = shell.clientHeight || 420;
-                const x = Math.min(Math.max((100/w)*px, 0), 100);
-                const y = Math.min(Math.max((100/h)*py, 0), 100);
-                const cx = x-50, cy = y-50;
-                shell.style.setProperty('--pc-pointer-x', x+'%');
-                shell.style.setProperty('--pc-pointer-y', y+'%');
-                shell.style.setProperty('--pc-from-left', x/100);
-                shell.style.setProperty('--pc-from-top',  y/100);
-                shell.style.setProperty('--pc-rotate-x', (-(cx/5))+'deg');
-                shell.style.setProperty('--pc-rotate-y', (cy/4)+'deg');
-                wrapper.style.setProperty('--pc-card-opacity','1');
+                const x = Math.min(Math.max((100 / w) * px, 0), 100);
+                const y = Math.min(Math.max((100 / h) * py, 0), 100);
+                const cx = x - 50, cy = y - 50;
+                shell.style.setProperty('--pc-pointer-x', x + '%');
+                shell.style.setProperty('--pc-pointer-y', y + '%');
+                shell.style.setProperty('--pc-from-left', x / 100);
+                shell.style.setProperty('--pc-from-top', y / 100);
+                shell.style.setProperty('--pc-rotate-x', (-(cx / 5)) + 'deg');
+                shell.style.setProperty('--pc-rotate-y', (cy / 4) + 'deg');
+                wrapper.style.setProperty('--pc-card-opacity', '1');
             };
 
-            shell.onpointermove = e => { const r=shell.getBoundingClientRect(); setVars(e.clientX-r.left, e.clientY-r.top); };
-            shell.onpointerenter = e => { shell.classList.add('active','entering'); setTimeout(()=>shell.classList.remove('entering'),180); const r=shell.getBoundingClientRect(); setVars(e.clientX-r.left, e.clientY-r.top); };
-            shell.onpointerleave = () => { shell.classList.remove('active'); wrapper.style.setProperty('--pc-card-opacity','0'); setVars(shell.clientWidth/2, shell.clientHeight/2); };
+            shell.onpointermove = e => { const r = shell.getBoundingClientRect(); setVars(e.clientX - r.left, e.clientY - r.top); };
+            shell.onpointerenter = e => { shell.classList.add('active', 'entering'); setTimeout(() => shell.classList.remove('entering'), 180); const r = shell.getBoundingClientRect(); setVars(e.clientX - r.left, e.clientY - r.top); };
+            shell.onpointerleave = () => { shell.classList.remove('active'); wrapper.style.setProperty('--pc-card-opacity', '0'); setVars(shell.clientWidth / 2, shell.clientHeight / 2); };
         }
 
         let authTempName = '';
         let authTempEmail = '';
         let authTempPassword = '';
+        let countdownTimer = null;
+        let cooldownSeconds = 0;
 
         function togglePasswordVisibility(id) {
             const input = document.getElementById(id);
@@ -1103,6 +1643,22 @@
             }
         }
 
+        function checkForgotPasswordStrength(val) {
+            const feedback = document.getElementById('forgot-password-feedback');
+            if (!val) {
+                feedback.classList.add('hidden');
+                return;
+            }
+            const result = validatePasswordStrength(val);
+            feedback.textContent = result.message;
+            feedback.classList.remove('hidden');
+            if (result.isValid) {
+                feedback.className = 'text-[10px] mt-1 text-accent';
+            } else {
+                feedback.className = 'text-[10px] mt-1 text-red-400';
+            }
+        }
+
         function isValidGmail(email) {
             if (!email) return false;
             const parts = email.split('@');
@@ -1120,10 +1676,13 @@
 
             const modalTitle = document.getElementById('auth-modal-title');
             const modalSubtitle = document.getElementById('auth-modal-subtitle');
-            
+
             // Hide all form panels
             document.getElementById('form-login').classList.add('hidden');
             document.getElementById('form-signup').classList.add('hidden');
+            document.getElementById('form-forgot').classList.add('hidden');
+            document.getElementById('form-otp-signup').classList.add('hidden');
+            document.getElementById('form-otp-forgot').classList.add('hidden');
 
             if (mode === 'login') {
                 modalTitle.textContent = 'Login';
@@ -1135,7 +1694,77 @@
                 modalSubtitle.textContent = 'Create your collaborative canvas account';
                 document.getElementById('form-signup').classList.remove('hidden');
                 setTimeout(() => document.getElementById('signup-name').focus(), 50);
+            } else if (mode === 'forgot') {
+                modalTitle.textContent = 'Forgot Password';
+                modalSubtitle.textContent = 'Reset your account credentials';
+                document.getElementById('form-forgot').classList.remove('hidden');
+                setTimeout(() => document.getElementById('forgot-email').focus(), 50);
+            } else if (mode === 'otp-signup') {
+                modalTitle.textContent = 'OTP Verification';
+                modalSubtitle.textContent = 'Confirm your Gmail address';
+                document.getElementById('form-otp-signup').classList.remove('hidden');
+                document.getElementById('otp-signup-sent-email').textContent = authTempEmail;
+                setTimeout(() => document.getElementById('signup-otp').focus(), 50);
+            } else if (mode === 'otp-forgot') {
+                modalTitle.textContent = 'Reset Password';
+                modalSubtitle.textContent = 'Verify OTP and set new password';
+                document.getElementById('form-otp-forgot').classList.remove('hidden');
+                document.getElementById('otp-forgot-sent-email').textContent = authTempEmail;
+                setTimeout(() => document.getElementById('forgot-otp').focus(), 50);
             }
+        }
+
+        function startResendCountdown(type) {
+            clearInterval(countdownTimer);
+            cooldownSeconds = 60;
+            const resendBtn = document.getElementById(`${type}-resend-btn`);
+            if (resendBtn) {
+                resendBtn.disabled = true;
+                resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
+            }
+
+            countdownTimer = setInterval(() => {
+                cooldownSeconds--;
+                if (cooldownSeconds <= 0) {
+                    clearInterval(countdownTimer);
+                    if (resendBtn) {
+                        resendBtn.disabled = false;
+                        resendBtn.textContent = 'Resend Code';
+                    }
+                } else {
+                    if (resendBtn) {
+                        resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
+                    }
+                }
+            }, 1000);
+        }
+
+        function resendOtp(type) {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            showSuccess('Resending verification code...');
+            startResendCountdown(type);
+
+            const url = type === 'signup' ? `${API_URL}/auth/send-otp` : `${API_URL}/auth/forgot-password/send-otp`;
+            const payload = type === 'signup' ? { email: authTempEmail, requestType: 'signup' } : { email: authTempEmail };
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            }).then(response => response.json().then(data => {
+                if (!response.ok) {
+                    showError(data.error || 'Failed to resend verification code.');
+                } else {
+                    showSuccess(data.message || 'Verification code resent successfully.');
+                }
+            })).catch(() => {
+                showError('Network error. Please check your connection.');
+            });
         }
 
         async function handleSignupSubmit() {
@@ -1164,7 +1793,7 @@
                 showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
                 return;
             }
-            
+
             const passVal = validatePasswordStrength(password);
             if (!passVal.isValid) {
                 showError('Password rules: ' + passVal.message);
@@ -1176,22 +1805,29 @@
                 return;
             }
 
-            setButtonLoading('signup-btn', true, 'Creating Account...');
-            showSuccess('Creating account...');
+            authTempName = name;
+            authTempEmail = email.toLowerCase();
+            authTempPassword = password;
+
+            setButtonLoading('signup-btn', true, 'Sending Code...');
+            showSuccess('Sending verification code...');
 
             try {
-                const response = await fetch(`${API_URL}/auth/signup`, {
+                const response = await fetch(`${API_URL}/auth/send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, email, password })
+                    credentials: 'include',
+                    body: JSON.stringify({ email: authTempEmail, requestType: 'signup' })
                 });
                 const data = await response.json();
                 if (!response.ok) {
-                    showError(data.error || 'Signup failed.');
+                    showError(data.error || 'Failed to send verification code.');
                     setButtonLoading('signup-btn', false, 'Create Account');
                 } else {
+                    showSuccess(data.message || 'Verification code sent successfully.');
                     setButtonLoading('signup-btn', false, 'Create Account');
-                    saveSessionAndLogin(data, true);
+                    switchAuthMode('otp-signup');
+                    startResendCountdown('signup');
                 }
             } catch (err) {
                 showError('Network error. Please check your connection.');
@@ -1215,6 +1851,7 @@
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ email, password })
                 });
 
@@ -1234,12 +1871,12 @@
         }
 
         function saveSessionAndLogin(data, isSignup = false) {
-            authToken  = data.token;
-            userEmail  = data.email;
-            userName   = data.name;
+            authToken = data.token;
+            userEmail = data.email;
+            userName = data.name;
             localStorage.setItem('infinity_token', authToken);
             localStorage.setItem('infinity_email', userEmail);
-            localStorage.setItem('infinity_name',  userName);
+            localStorage.setItem('infinity_name', userName);
             if (data.picture) {
                 localStorage.setItem('infinity_profile_pic', data.picture);
             }
@@ -1301,29 +1938,172 @@
             successDiv.classList.remove('hidden');
         }
 
+        async function handleForgotSubmit() {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            let email = document.getElementById('forgot-email').value.trim();
+            if (!email) {
+                showError('Please enter your Gmail address.');
+                return;
+            }
+            if (!email.includes('@')) {
+                email = email + '@gmail.com';
+            }
+            if (!isValidGmail(email)) {
+                showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
+                return;
+            }
+
+            authTempEmail = email.toLowerCase();
+
+            setButtonLoading('forgot-btn', true, 'Sending Code...');
+            showSuccess('Sending verification code...');
+
+            try {
+                const response = await fetch(`${API_URL}/auth/forgot-password/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email: authTempEmail })
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'Failed to send verification code.');
+                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
+                } else {
+                    showSuccess(data.message || 'Verification code sent successfully.');
+                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
+                    switchAuthMode('otp-forgot');
+                    startResendCountdown('forgot');
+                }
+            } catch (err) {
+                showError('Network error. Please check your connection.');
+                setButtonLoading('forgot-btn', false, 'Send Reset Code');
+            }
+        }
+
+        async function completeSignup() {
+            const otp = document.getElementById('signup-otp').value.trim();
+
+            if (!otp) {
+                showError('Please enter verification code.');
+                return;
+            }
+
+            setButtonLoading('otp-signup-btn', true, 'Creating Account...');
+            showSuccess('Creating account...');
+
+            try {
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: authTempName,
+                        email: authTempEmail,
+                        otp,
+                        password: authTempPassword
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
+                    setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
+                    return;
+                }
+
+                saveSessionAndLogin(data, true);
+                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
+            } catch (err) {
+                showError('Network error during account creation.');
+                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
+            }
+        }
+
+        async function completeReset() {
+            const otp = document.getElementById('forgot-otp').value.trim();
+            const newPassword = document.getElementById('forgot-password').value;
+            const confirmPassword = document.getElementById('forgot-confirm-password').value;
+
+            if (!otp || !newPassword || !confirmPassword) {
+                showError('All fields are required.');
+                return;
+            }
+
+            const passVal = validatePasswordStrength(newPassword);
+            if (!passVal.isValid) {
+                showError('New password rules: ' + passVal.message);
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showError('Passwords do not match.');
+                return;
+            }
+
+            setButtonLoading('otp-forgot-btn', true, 'Resetting Password...');
+            showSuccess('Resetting password...');
+
+            try {
+                const response = await fetch(`${API_URL}/auth/forgot-password/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email: authTempEmail,
+                        otp,
+                        newPassword
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
+                    setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
+                    return;
+                }
+
+                saveSessionAndLogin(data, false);
+                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
+            } catch (err) {
+                showError('Network error during password reset.');
+                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
+            }
+        }
+
         function clearAuthInputs() {
             document.getElementById('login-email').value = '';
             document.getElementById('login-password').value = '';
             document.getElementById('signup-name').value = '';
             document.getElementById('signup-email').value = '';
+            document.getElementById('signup-otp').value = '';
             document.getElementById('signup-password').value = '';
-            document.getElementById('signup-confirm-password').value = '';
-            
+            document.getElementById('forgot-email').value = '';
+            document.getElementById('forgot-otp').value = '';
+            document.getElementById('forgot-password').value = '';
+            document.getElementById('forgot-confirm-password').value = '';
+
             document.getElementById('auth-error').classList.add('hidden');
             document.getElementById('auth-success').classList.add('hidden');
             const feedback = document.getElementById('signup-password-feedback');
             if (feedback) feedback.classList.add('hidden');
+            const forgotFeedback = document.getElementById('forgot-password-feedback');
+            if (forgotFeedback) forgotFeedback.classList.add('hidden');
         }
 
         window.logout = () => {
             authToken = null;
             userEmail = null;
-            userName  = '';
+            userName = '';
             localStorage.removeItem('infinity_token');
             localStorage.removeItem('infinity_email');
             localStorage.removeItem('infinity_name');
             localStorage.removeItem('infinity_profile_pic');
-            
+
             // Close profile modal if open
             document.getElementById('profile-modal').classList.add('hidden');
 
@@ -1333,7 +2113,7 @@
             activeProject = null;
             localStorage.removeItem('infinity_ai_history');
             localStorage.removeItem('infinity_projects');
-            
+
             updateAuthUI();
             renderProjects();
             renderSidebarHistory();
@@ -1356,7 +2136,8 @@
         async function fetchHistory() {
             try {
                 const response = await fetch(`${API_URL}/history/sync`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` }
+                    headers: { 'Authorization': `Bearer ${authToken}` },
+                    credentials: 'include'
                 });
                 if (response.ok) {
                     const data = await response.json();
@@ -1378,6 +2159,7 @@
                 await fetch(`${API_URL}/history/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                    credentials: 'include',
                     body: JSON.stringify({ history: chatHistoryDb, projects: projectsDb })
                 });
             } catch (err) {
@@ -1389,12 +2171,12 @@
         function autoResize(el) {
             el.style.height = '44px';
             el.style.height = (el.scrollHeight) + 'px';
-            
+
             const hasAttachment = window.attachedFileContext && window.attachedFileName;
             const hasText = el.value.trim() !== '';
-            
+
             sendButton.disabled = !(hasText || hasAttachment);
-            
+
             if (hasText || hasAttachment) {
                 sendButton.classList.add('bg-white');
                 sendButton.classList.remove('bg-border');
@@ -1405,20 +2187,20 @@
         }
 
         // Suggestions interaction
-        window.setInputValue = function(text) {
+        window.setInputValue = function (text) {
             messageInput.value = text;
             autoResize(messageInput);
             messageInput.focus();
         }
 
         // Sidebar Toggles
-        window.toggleSidebar = function() {
+        window.toggleSidebar = function () {
             sidebar.classList.toggle('-translate-x-full');
             sidebarOverlay.classList.toggle('hidden');
         }
 
         // --- Core Chat Rendering Logic --- //
-        
+
         function createMessageElement(text, role, isHTML = false) {
             if (emptyState && emptyState.style.display !== 'none') {
                 emptyState.style.display = 'none';
@@ -1427,7 +2209,7 @@
             const isUser = role === 'user';
             const wrapper = document.createElement("div");
             wrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
-            
+
             const innerContainer = document.createElement("div");
             innerContainer.className = `flex gap-4 max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`;
 
@@ -1443,7 +2225,7 @@
             // Message Bubble
             const bubble = document.createElement("div");
             bubble.className = `prose prose-invert max-w-none ${isUser ? 'bg-card px-5 py-3 rounded-2xl rounded-tr-sm text-white border border-border shadow-md flex flex-col' : 'text-white pt-1'}`;
-            
+
             // Initial Markdown Render
             if (isUser) {
                 bubble.innerHTML = isHTML ? text : escapeHTML(text);
@@ -1455,7 +2237,7 @@
             innerContainer.appendChild(bubble);
             wrapper.appendChild(innerContainer);
             chatContent.appendChild(wrapper);
-            
+
             lucide.createIcons({ root: wrapper });
             addCopyButtonsToPre(bubble);
 
@@ -1464,11 +2246,11 @@
 
         function createTypingIndicator() {
             if (emptyState && emptyState.style.display !== 'none') emptyState.style.display = 'none';
-            
+
             const wrapper = document.createElement("div");
             wrapper.className = `flex w-full justify-start animate-fade-in`;
             wrapper.id = 'typing-indicator';
-            
+
             wrapper.innerHTML = `
                 <div class="flex gap-4 max-w-[85%] flex-row">
                     <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center shadow-md bg-white border border-border">
@@ -1541,10 +2323,11 @@
             try {
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${authToken}`
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ messages: apiMessages })
                 });
 
@@ -1574,13 +2357,13 @@
                                 try {
                                     const jsonStr = trimmed.slice(6);
                                     const parsed = JSON.parse(jsonStr);
-                                    
+
                                     if (parsed.error) {
                                         createMessageElement(`Error: ${parsed.error} (${parsed.details || ''})`, "ai");
                                         receiving = false;
                                         return;
                                     }
-                                    
+
                                     const content = parsed.choices?.[0]?.delta?.content || "";
                                     if (content) {
                                         if (!firstChunkReceived) {
@@ -1625,18 +2408,18 @@
         sendButton.addEventListener("click", () => {
             const hasText = messageInput.value.trim() !== "";
             const hasAttachment = window.attachedFileContext && window.attachedFileName;
-            
+
             if (!receiving && (hasText || hasAttachment)) {
                 const rawUserText = messageInput.value.trim();
                 messageInput.value = "";
                 autoResize(messageInput);
-                
+
                 // Formulate the display text vs the actual payload sent
                 let displayHTML = rawUserText;
                 let payloadText = rawUserText;
-                
+
                 let contextHeader = '';
-                
+
                 if (window.attachedFileContext && window.attachedFileName === 'Notebook Page') {
                     contextHeader += `--- CURRENT NOTEBOOK PAGE ---\n${window.attachedFileContext}\n-----------------------------------\n\n`;
                 }
@@ -1650,20 +2433,20 @@
                         </div>
                     `;
                     displayHTML = attachmentHTML + (rawUserText ? `<div>${rawUserText}</div>` : '');
-                    
+
                     // Prepend the raw text context to the actual API payload
                     contextHeader += `--- ATTACHED DOCUMENT: ${window.attachedFileName} ---\n${window.attachedFileContext}\n-----------------------------------\n\n`;
                 }
-                
+
                 // Always clear attachment/context after sending once!
                 if (hasAttachment) {
                     removeAttachment();
                 }
-                
+
                 payloadText = contextHeader + payloadText;
-                
+
                 // createMessageElement uses textContent for safety normally, so we bypass it for the attachment HTML
-                const bubbleData = createMessageElement(displayHTML, "user", true); 
+                const bubbleData = createMessageElement(displayHTML, "user", true);
                 chatbox.scrollTop = chatbox.scrollHeight;
 
                 connectWebSocket(payloadText);
@@ -1681,16 +2464,16 @@
 
         // --- Sidebar & History Management --- //
 
-        window.startNewChat = function(keepProject = false) {
+        window.startNewChat = function (keepProject = false) {
             if (receiving) return;
-            
+
             if (!keepProject && activeProject !== null) {
                 activeProject = null;
                 renderProjects();
             }
-            
+
             activeChatId = crypto.randomUUID();
-            
+
             // Clear current chat view
             Array.from(chatContent.children).forEach(child => {
                 if (child.id !== 'empty-state') {
@@ -1698,19 +2481,19 @@
                 }
             });
             emptyState.style.display = 'flex';
-            
+
             // Reset input
             messageInput.value = "";
             autoResize(messageInput);
-            
+
             renderSidebarHistory();
-            if(window.innerWidth < 768) toggleSidebar();
+            if (window.innerWidth < 768) toggleSidebar();
         }
 
         function loadChat(chatId) {
             if (receiving) return;
             activeChatId = chatId;
-            
+
             // Clear current chat view
             Array.from(chatContent.children).forEach(child => {
                 if (child.id !== 'empty-state') child.remove();
@@ -1725,7 +2508,7 @@
             }
             chatbox.scrollTop = chatbox.scrollHeight;
             renderSidebarHistory();
-            if(window.innerWidth < 768) toggleSidebar();
+            if (window.innerWidth < 768) toggleSidebar();
         }
 
         function saveHistory() {
@@ -1735,7 +2518,7 @@
             syncHistory(); // Push to DB
         }
 
-        window.searchChats = function() {
+        window.searchChats = function () {
             const query = document.getElementById('chat-search').value;
             renderSidebarHistory(query);
         }
@@ -1743,42 +2526,42 @@
         function renderSidebarHistory(searchQuery = '') {
             const chatHistoryContainer = document.getElementById("chat-history");
             chatHistoryContainer.innerHTML = '';
-            
+
             const recentChatsHeader = document.getElementById("recent-chats-header");
-            
+
             // If we are inside a project and not searching, hide the entire Recent Chats global section!
             if (activeProject && !searchQuery) {
                 if (recentChatsHeader) recentChatsHeader.style.display = 'none';
                 return; // Project chats are now rendered inside renderProjects()!
             }
-            
+
             if (recentChatsHeader) {
                 recentChatsHeader.style.display = 'block';
                 // If searching, maybe change header title to Search Results
                 recentChatsHeader.textContent = searchQuery ? 'Search Results' : 'Recent Chats';
             }
-            
+
             const sortedIds = Object.keys(chatHistoryDb).sort((a, b) => chatHistoryDb[b].date - chatHistoryDb[a].date);
-            
+
             let matchedCount = 0;
-            
+
             sortedIds.forEach(id => {
                 const chat = chatHistoryDb[id];
-                
+
                 // If we are just viewing globally, filter out project chats.
                 // But if we are searching, show EVERYTHING!
                 if (!searchQuery && chat.project) return;
-                
+
                 // Search Filter
                 if (searchQuery && !chat.title.toLowerCase().includes(searchQuery.toLowerCase())) {
                     return;
                 }
-                
+
                 matchedCount++;
                 const isActive = id === activeChatId;
                 const item = document.createElement("div");
                 item.className = `group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${isActive ? 'bg-card text-white' : 'hover:bg-white/5 text-textSecondary hover:text-white'}`;
-                
+
                 // Show badge if searching and it belongs to a project
                 const projBadge = (searchQuery && chat.project) ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/70 ml-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]">${escapeHTML(chat.project)}</span>` : '';
 
@@ -1798,18 +2581,18 @@
                 `;
                 chatHistoryContainer.appendChild(item);
             });
-            
+
             if (matchedCount === 0 && searchQuery) {
                 chatHistoryContainer.innerHTML = '<div class="text-xs text-textSecondary px-3 py-4 text-center">No chats found.</div>';
             }
-            
+
             lucide.createIcons({ root: chatHistoryContainer });
         }
 
         // --- Modals Logic --- //
         let targetActionId = null;
 
-        window.openRenameModal = function(e, id) {
+        window.openRenameModal = function (e, id) {
             e.stopPropagation();
             targetActionId = id;
             document.getElementById('rename-input').value = chatHistoryDb[id].title;
@@ -1817,13 +2600,13 @@
             document.getElementById('rename-input').focus();
         }
 
-        window.openDeleteModal = function(e, id) {
+        window.openDeleteModal = function (e, id) {
             e.stopPropagation();
             targetActionId = id;
             document.getElementById('delete-modal').classList.remove('hidden');
         }
 
-        window.closeModal = function(id) {
+        window.closeModal = function (id) {
             document.getElementById(id).classList.add('hidden');
             targetActionId = null;
         }
@@ -1852,7 +2635,7 @@
 
         // --- Utilities --- //
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
+            return str.replace(/[&<>'"]/g,
                 tag => ({
                     '&': '&amp;',
                     '<': '&lt;',
@@ -1871,7 +2654,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'copy-code-btn';
                 btn.innerHTML = `<i data-lucide="copy" class="w-3 h-3"></i> Copy`;
-                
+
                 btn.onclick = () => {
                     const code = pre.querySelector('code').innerText;
                     navigator.clipboard.writeText(code).then(() => {
@@ -1882,7 +2665,7 @@
                         }, 2000);
                     });
                 };
-                
+
                 pre.appendChild(btn);
             });
             lucide.createIcons({ root: container });
@@ -1900,7 +2683,7 @@
             }
         }
 
-        window.selectProject = function(projName) {
+        window.selectProject = function (projName) {
             if (activeProject === projName) {
                 activeProject = null;
             } else {
@@ -1908,17 +2691,17 @@
             }
             renderProjects();
             renderSidebarHistory();
-            startNewChat(true); 
+            startNewChat(true);
         };
 
         function renderProjects() {
             const projectsContainer = document.getElementById('projects-list');
             if (!projectsContainer) return;
             projectsContainer.innerHTML = '';
-            
+
             projectsDb.forEach(proj => {
                 const isActive = proj === activeProject;
-                
+
                 // Add Folder
                 projectsContainer.insertAdjacentHTML('beforeend', `
                     <a href="#" onclick="selectProject('${escapeHTML(proj)}')" class="flex items-center gap-3 w-full p-2.5 rounded-md transition-colors text-sm mt-1 ${isActive ? 'bg-white/10 text-white font-medium' : 'hover:bg-white/5 text-textSecondary hover:text-white'}">
@@ -1927,12 +2710,12 @@
                         ${isActive ? '<i data-lucide="chevron-down" class="w-4 h-4 ml-auto text-textSecondary"></i>' : ''}
                     </a>
                 `);
-                
+
                 // If this is the active project, list its chats right here (nested)
                 if (isActive) {
                     const sortedIds = Object.keys(chatHistoryDb).sort((a, b) => chatHistoryDb[b].date - chatHistoryDb[a].date);
                     const projectChats = sortedIds.filter(id => chatHistoryDb[id].project === proj);
-                    
+
                     if (projectChats.length === 0) {
                         projectsContainer.insertAdjacentHTML('beforeend', `
                             <div class="pl-9 pr-3 py-2 text-xs text-textSecondary italic">No chats yet. Start typing!</div>
@@ -1982,7 +2765,7 @@
 
             const input = document.getElementById('messageInput');
             const preview = document.getElementById('attachment-preview');
-            
+
             // Show a loading chip
             preview.innerHTML = `
                 <div class="flex items-center gap-2 bg-main border border-border px-3 py-1.5 rounded-lg text-sm text-textSecondary">
@@ -1992,15 +2775,15 @@
             `;
             preview.classList.remove('hidden');
             lucide.createIcons();
-            
+
             input.disabled = true;
-            
+
             try {
                 let text = '';
-                
+
                 if (file.type === 'application/pdf') {
                     const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                     let fullText = '';
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
@@ -2010,7 +2793,7 @@
                     text = fullText;
                 } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
                     const arrayBuffer = await file.arrayBuffer();
-                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
                     text = result.value;
                 } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
                     const arrayBuffer = await file.arrayBuffer();
@@ -2053,7 +2836,7 @@
                     </div>
                 `;
                 lucide.createIcons();
-                
+
             } catch (err) {
                 console.error("Error reading file:", err);
                 preview.innerHTML = `
@@ -2067,7 +2850,7 @@
                 `;
                 lucide.createIcons();
             }
-            
+
             input.disabled = false;
             input.focus();
             input.dispatchEvent(new Event('input')); // enable send button
@@ -2092,14 +2875,14 @@
         function streamWelcomeMessage(name) {
             if (receiving) return;
             receiving = true;
-            
+
             if (!chatHistoryDb[activeChatId]) {
                 chatHistoryDb[activeChatId] = { title: "Welcome Chat", date: Date.now(), messages: [], project: activeProject };
                 renderSidebarHistory();
             }
 
             const welcomeText = `Hello ${name || 'there'}! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
-            
+
             const elements = createMessageElement("", "ai");
             const messageBubble = elements.bubble;
             messageBubble.classList.add('blinking-cursor');
@@ -2122,7 +2905,7 @@
                         messageBubble.classList.remove('blinking-cursor');
                     }
                     receiving = false;
-                    
+
                     // Save to history and emit to socket
                     chatHistoryDb[activeChatId].messages.push({ role: 'ai', content: welcomeText });
                     saveHistory();
@@ -2170,7 +2953,7 @@
             const socketUrl = API_URL.replace('/api', '');
             try {
                 socket = io(socketUrl, { transports: ['websocket', 'polling'] });
-                
+
                 socket.on('connect', () => {
                     console.log('Connected to collaboration socket server.');
                     if (activeChatId) {
@@ -2201,7 +2984,7 @@
             }
             chatHistoryDb[activeChatId].messages = messages;
             localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
-            
+
             // Re-render chat area without starting new session
             Array.from(chatContent.children).forEach(child => {
                 if (child.id !== 'empty-state') child.remove();
@@ -2217,7 +3000,7 @@
 
         // Trigger Socket sync whenever activeChatId changes
         const originalLoadChat = loadChat;
-        loadChat = function(chatId) {
+        loadChat = function (chatId) {
             originalLoadChat(chatId);
             if (socket) {
                 socket.emit('join_chat', chatId);
@@ -2225,7 +3008,7 @@
         };
 
         const originalStartNewChat = startNewChat;
-        startNewChat = function(keepProject = false) {
+        startNewChat = function (keepProject = false) {
             originalStartNewChat(keepProject);
             if (socket && activeChatId) {
                 socket.emit('join_chat', activeChatId);
@@ -2233,7 +3016,7 @@
         };
 
         // Open Share Workspace Modal
-        window.openChatShareModal = function() {
+        window.openChatShareModal = function () {
             // If the active chat is not registered in DB yet, seed a placeholder
             if (!chatHistoryDb[activeChatId]) {
                 chatHistoryDb[activeChatId] = { title: "New Collaborative Chat", date: Date.now(), messages: [], project: activeProject };
@@ -2249,13 +3032,13 @@
             switchChatShareTab('link');
         };
 
-        window.closeChatShareModal = function(e) {
+        window.closeChatShareModal = function (e) {
             if (e.target === document.getElementById('chat-share-modal')) {
                 document.getElementById('chat-share-modal').classList.add('hidden');
             }
         };
 
-        window.switchChatShareTab = function(tab) {
+        window.switchChatShareTab = function (tab) {
             const btnLink = document.getElementById('tab-btn-link');
             const btnMembers = document.getElementById('tab-btn-members');
             const btnAi = document.getElementById('tab-btn-ai');
@@ -2273,7 +3056,7 @@
             if (tab === 'ai') { contentLink.classList.add('hidden'); contentMembers.classList.add('hidden'); contentAi.classList.remove('hidden'); }
         };
 
-        window.setChatSharePermission = function(role) {
+        window.setChatSharePermission = function (role) {
             chatSharePermission = role;
             ['view', 'comment', 'edit'].forEach(mode => {
                 const btn = document.getElementById(`chat-perm-${mode}`);
@@ -2289,7 +3072,7 @@
         function updateChatShareLink() {
             const linkInput = document.getElementById('chat-share-url-input');
             const qrImage = document.getElementById('chat-share-qr');
-            
+
             // Build the absolute sharing link
             const shareUrl = `${window.location.origin}/chatbot.ai/index.html?chat=${activeChatId}&access=${chatSharePermission}`;
             linkInput.value = shareUrl;
@@ -2298,14 +3081,14 @@
             qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
         }
 
-        window.copyChatShareUrl = function() {
+        window.copyChatShareUrl = function () {
             const linkInput = document.getElementById('chat-share-url-input');
             navigator.clipboard.writeText(linkInput.value).then(() => {
                 alert('Secure workspace sharing URL copied to clipboard!');
             });
         };
 
-        window.generateChatRecap = function() {
+        window.generateChatRecap = function () {
             const resultBox = document.getElementById('chat-recap-result');
             resultBox.classList.remove('hidden');
             resultBox.innerHTML = `
@@ -2320,4 +3103,5 @@
         };
     </script>
 </body>
+
 </html>

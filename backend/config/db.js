@@ -1,4 +1,12 @@
 const mongoose = require("mongoose");
+const dns = require("dns");
+
+// Programmatically resolve querySrv DNS issues (common with Airtel/Jio ISPs in India/other regions blocking SRV lookups)
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch (err) {
+  console.warn("Warning: Could not set custom DNS servers, using system defaults:", err.message);
+}
 
 const connectDB = async () => {
   try {

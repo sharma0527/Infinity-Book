@@ -1,8 +1,10 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const User = require('../models/User');
-const { sendWelcomeEmail } = require('../services/emailService');
+const Otp = require('../models/Otp');
+const { sendWelcomeEmail, sendOTP } = require('../services/emailService');
 const router = express.Router();
 
 const disposableDomains = [
@@ -40,12 +42,80 @@ function isStrongPassword(password) {
     return hasUppercase && hasLowercase && hasNumber && hasSpecial;
 }
 
-// 1. SIGNUP (Direct account creation)
+// 1. SEND OTP (Signup/Spam protection/Resend Rate Limiter)
+router.post('/send-otp', async (req, res) => {
+    try {
+        const { email, requestType } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Gmail address is required.' });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        if (!isGmail(normalizedEmail)) {
+            return res.status(400).json({ error: 'Only Gmail addresses (@gmail.com) are accepted.' });
+        }
+        if (isDisposable(normalizedEmail)) {
+            return res.status(400).json({ error: 'Disposable email addresses are not allowed.' });
+        }
+
+        // Check if signing up an already existing verified user
+        if (requestType === 'signup') {
+            const existingUser = await User.findOne({ email: normalizedEmail, verified: true });
+            if (existingUser) {
+                return res.status(400).json({ error: 'Email already registered. Please log in instead.' });
+            }
+        }
+
+        // Enforce 60-second resend cooldown via DB timestamp
+        const existingOtp = await Otp.findOne({ email: normalizedEmail });
+        if (existingOtp) {
+            const timeElapsed = Date.now() - existingOtp.updatedAt.getTime();
+            const cooldown = 60 * 1000;
+            if (timeElapsed < cooldown) {
+                const remaining = Math.ceil((cooldown - timeElapsed) / 1000);
+                return res.status(429).json({ error: `Please wait ${remaining} seconds before requesting a new code.` });
+            }
+        }
+
+        // Generate and Hash OTP (using SHA-256 for secure storage)
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+        
+        await Otp.findOneAndUpdate(
+            { email: normalizedEmail },
+            { otp: hashedOtp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+            { upsert: true, new: true }
+        );
+
+        console.log(`\n========================================`);
+        console.log(`[OTP Verification] Code for: ${normalizedEmail}`);
+        console.log(`Verification Code: ${otp}`);
+        console.log(`========================================\n`);
+
+        const sent = await sendOTP(normalizedEmail, otp);
+        if(!sent){
+            return res.status(500).json({
+                success: false,
+                error: "Unable to send OTP."
+            });
+        }
+
+        res.json({ success: true, message: 'Verification code sent successfully.' });
+    } catch (err) {
+        console.error('[OTP Send Error]:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
+    }
+});
+
+// 2. SIGNUP (OTP Verified + Password Creation)
 router.post('/signup', async (req, res) => {
     try {
-        const { name, email, password } = req.body;
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: 'All fields are required.' });
+        const { name, email, password, otp } = req.body;
+        if (!name || !email || !password || !otp) {
+            return res.status(400).json({ error: 'All fields (including verification code) are required.' });
         }
 
         const normalizedEmail = email.toLowerCase().trim();
@@ -61,6 +131,26 @@ router.post('/signup', async (req, res) => {
         if (!isStrongPassword(password)) {
             return res.status(400).json({ error: 'Password does not meet safety criteria (Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character).' });
         }
+
+        // Security check: Verify the OTP
+        const storedOtp = await Otp.findOne({ email: normalizedEmail });
+        if (!storedOtp) {
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        if (storedOtp.expiresAt < Date.now()) {
+            await Otp.deleteOne({ email: normalizedEmail });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
+        const matches = (computedHash === storedOtp.otp);
+        if (!matches) {
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        // Clean up OTP record
+        await Otp.deleteOne({ email: normalizedEmail });
 
         // Check if user already exists
         let user = await User.findOne({ email: normalizedEmail });
@@ -122,7 +212,7 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-// 2. LOGIN (Email + Password)
+// 3. LOGIN (Email + Password)
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -162,6 +252,133 @@ router.post('/login', async (req, res) => {
         });
     } catch (err) {
         console.error('[Login Error]:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
+    }
+});
+
+// 4. FORGOT PASSWORD SEND OTP
+router.post('/forgot-password/send-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email address is required.' });
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail, verified: true });
+        if (!user) {
+            return res.status(404).json({ error: 'No verified account found with this email address.' });
+        }
+
+        // Enforce 60-second cooldown
+        const existingOtp = await Otp.findOne({ email: normalizedEmail });
+        if (existingOtp) {
+            const timeElapsed = Date.now() - existingOtp.updatedAt.getTime();
+            const cooldown = 60 * 1000;
+            if (timeElapsed < cooldown) {
+                const remaining = Math.ceil((cooldown - timeElapsed) / 1000);
+                return res.status(429).json({ error: `Please wait ${remaining} seconds before requesting a new code.` });
+            }
+        }
+
+        // Generate and Hash OTP (using SHA-256 for secure storage)
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
+        
+        await Otp.findOneAndUpdate(
+            { email: normalizedEmail },
+            { otp: hashedOtp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+            { upsert: true, new: true }
+        );
+
+        console.log(`\n========================================`);
+        console.log(`[Forgot Password OTP] Code for: ${normalizedEmail}`);
+        console.log(`Verification Code: ${otp}`);
+        console.log(`========================================\n`);
+
+        const sent = await sendOTP(normalizedEmail, otp);
+        if(!sent){
+            return res.status(500).json({
+                success: false,
+                error: "Unable to send OTP."
+            });
+        }
+
+        res.json({ success: true, message: 'Verification code sent successfully.' });
+    } catch (err) {
+        console.error('[Forgot Password Send OTP Error]:', err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+        });
+    }
+});
+
+// 5. FORGOT PASSWORD RESET (Verifies OTP + resets password)
+router.post('/forgot-password/reset', async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ error: 'Email, verification code, and new password are required.' });
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        if (!isStrongPassword(newPassword)) {
+            return res.status(400).json({ error: 'Password does not meet safety criteria (Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special character).' });
+        }
+
+        const storedOtp = await Otp.findOne({ email: normalizedEmail });
+        if (!storedOtp) {
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        if (storedOtp.expiresAt < Date.now()) {
+            await Otp.deleteOne({ email: normalizedEmail });
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        const computedHash = crypto.createHash('sha256').update(otp).digest('hex');
+        const matches = (computedHash === storedOtp.otp);
+        if (!matches) {
+            return res.status(400).json({ error: 'The verification code is incorrect or has expired. Please request a new code.' });
+        }
+
+        // Clean up OTP record
+        await Otp.deleteOne({ email: normalizedEmail });
+
+        const user = await User.findOne({ email: normalizedEmail, verified: true });
+        if (!user) {
+            return res.status(404).json({ error: 'Account not found.' });
+        }
+
+        // Hash New Password
+        user.password = await bcrypt.hash(newPassword, 12);
+        user.lastLogin = Date.now();
+        await user.save();
+
+        const token = jwt.sign(
+            { userId: user._id }, 
+            process.env.JWT_SECRET || 'infinity_fallback_secret_key_2026', 
+            { expiresIn: '30d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Password reset successfully.',
+            token,
+            name: user.name,
+            email: user.email,
+            picture: user.picture || '',
+            history: user.history || {},
+            projects: user.projects || []
+        });
+    } catch (err) {
+        console.error('[Forgot Password Reset Error]:', err);
         res.status(500).json({
             success: false,
             error: err.message,
