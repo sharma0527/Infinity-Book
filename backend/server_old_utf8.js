@@ -490,7 +490,7 @@ app.get('/test-email', async (req, res) => {
 });
 
 // Fallback Route for Single Page Application
-app.use((req, res) => {
+app.get('/(.*)', (req, res) => {
   const indexPath = path.join(__dirname, '../frontend/dist/index.html');
   require('fs').stat(indexPath, (err) => {
     if (err) {
