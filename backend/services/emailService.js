@@ -1,26 +1,18 @@
 const nodemailer = require("nodemailer");
 
-const emailUser = (process.env.SMTP_USER || process.env.EMAIL_USER || process.env.EMAIL || "").trim().replace(/^["']|["']$/g, '');
-let emailPass = process.env.SMTP_PASS || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || "";
-if (emailPass) {
-    emailPass = emailPass.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
-}
-
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT) || 587,
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
     secure: false,
-    requireTLS: true,
     auth: {
-        user: emailUser,
-        pass: emailPass
-    },
-    family: 4,
-    connectionTimeout: 60000,
-    greetingTimeout: 60000,
-    socketTimeout: 60000
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
 });
 
+const getSenderEmail = () => {
+    return process.env.EMAIL_FROM || process.env.SMTP_USER || process.env.EMAIL_USER || "no-reply@infinity.book";
+};
 
 async function sendOTP(email, otp) {
     const subject = "Infinity AI Verification Code";
@@ -52,7 +44,7 @@ async function sendOTP(email, otp) {
                     "content-type": "application/json"
                 },
                 body: JSON.stringify({
-                    sender: { name: "Infinity AI", email: emailUser || "no-reply@infinity.book" },
+                    sender: { name: "Infinity AI", email: getSenderEmail() },
                     to: [{ email: email }],
                     subject: subject,
                     htmlContent: html
@@ -82,7 +74,7 @@ async function sendOTP(email, otp) {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    from: process.env.SMTP_FROM || (emailUser ? `Infinity AI <${emailUser}>` : "Infinity AI <onboarding@resend.dev>"),
+                    from: process.env.SMTP_FROM || `Infinity AI <${getSenderEmail()}>`,
                     to: email,
                     subject: subject,
                     html: html
@@ -113,7 +105,7 @@ async function sendOTP(email, otp) {
                 },
                 body: JSON.stringify({
                     personalizations: [{ to: [{ email: email }] }],
-                    from: { email: emailUser || "no-reply@infinity.book", name: "Infinity AI" },
+                    from: { email: getSenderEmail(), name: "Infinity AI" },
                     subject: subject,
                     content: [{ type: "text/html", value: html }]
                 })
@@ -131,13 +123,13 @@ async function sendOTP(email, otp) {
     }
 
     // 4. Default Fallback: SMTP
-    if (!emailUser || !emailPass) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
         console.error("SMTP credentials missing.");
         return false;
     }
 
     const mailOptions = {
-        from: process.env.SMTP_FROM || `"Infinity AI" <${emailUser}>`,
+        from: process.env.EMAIL_FROM || `"Infinity AI" <${getSenderEmail()}>`,
         to: email,
         subject: subject,
         text: text,
@@ -186,7 +178,7 @@ async function sendWelcomeEmail(email, name) {
                     "content-type": "application/json"
                 },
                 body: JSON.stringify({
-                    sender: { name: "Infinity AI", email: emailUser || "no-reply@infinity.book" },
+                    sender: { name: "Infinity AI", email: getSenderEmail() },
                     to: [{ email: email }],
                     subject: subject,
                     htmlContent: html
@@ -212,7 +204,7 @@ async function sendWelcomeEmail(email, name) {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    from: process.env.SMTP_FROM || (emailUser ? `Infinity AI <${emailUser}>` : "Infinity AI <onboarding@resend.dev>"),
+                    from: process.env.SMTP_FROM || `Infinity AI <${getSenderEmail()}>`,
                     to: email,
                     subject: subject,
                     html: html
@@ -239,7 +231,7 @@ async function sendWelcomeEmail(email, name) {
                 },
                 body: JSON.stringify({
                     personalizations: [{ to: [{ email: email }] }],
-                    from: { email: emailUser || "no-reply@infinity.book", name: "Infinity AI" },
+                    from: { email: getSenderEmail(), name: "Infinity AI" },
                     subject: subject,
                     content: [{ type: "text/html", value: html }]
                 })
@@ -254,13 +246,13 @@ async function sendWelcomeEmail(email, name) {
     }
 
     // 4. Default Fallback: SMTP
-    if (!emailUser || !emailPass) {
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
         console.error("Welcome SMTP credentials missing.");
         return false;
     }
 
     const mailOptions = {
-        from: process.env.SMTP_FROM || `"Infinity AI" <${emailUser}>`,
+        from: process.env.EMAIL_FROM || `"Infinity AI" <${getSenderEmail()}>`,
         to: email,
         subject: subject,
         text: text,

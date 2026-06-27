@@ -100,12 +100,14 @@ router.post('/send-otp', async (req, res) => {
         }
 
         res.json({ success: true, message: 'Verification code sent successfully.' });
-    } catch (err) {
-        console.error('[OTP Send Error]:', err);
-        res.status(500).json({
+    } catch (error) {
+        console.error("========== SEND OTP ERROR ==========");
+        console.error(error);
+        console.error(error.stack);
+
+        return res.status(500).json({
             success: false,
-            error: err.message,
-            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+            error: error.message
         });
     }
 });

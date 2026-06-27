@@ -472,20 +472,19 @@ app.get('/test', (req, res) => {
 app.get('/test-email', async (req, res) => {
   try {
     const { transporter } = require('./services/emailService');
-    const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
     const recipient = req.query.to || "yourpersonalemail@gmail.com";
 
     await transporter.sendMail({
-      from: `"Infinity AI" <${emailUser}>`,
+      from: process.env.EMAIL_FROM || "Infinity AI",
       to: recipient,
       subject: "Test Email",
-      text: "Infinity AI Email Working"
+      text: "Brevo is working!"
     });
 
-    res.send(`Email successfully sent to ${recipient}! Check your inbox.`);
+    res.send("Email sent successfully.");
   } catch (err) {
     console.error("Test Email Error:", err);
-    res.status(500).send("Failed to send email: " + err.message);
+    res.status(500).send(err.message);
   }
 });
 
