@@ -1,15 +1,7 @@
 require('dotenv').config();
 
-// Standardize email env vars
-if (!process.env.EMAIL_USER && process.env.EMAIL) {
-  process.env.EMAIL_USER = process.env.EMAIL;
-}
-if (!process.env.EMAIL_PASS && process.env.EMAIL_PASSWORD) {
-  process.env.EMAIL_PASS = process.env.EMAIL_PASSWORD;
-}
-
 // Strict ENV Validation
-const requiredEnv = ["MONGO_URI", "EMAIL_USER", "EMAIL_PASS", "JWT_SECRET"];
+const requiredEnv = ["MONGO_URI", "SMTP_USER", "SMTP_PASS", "JWT_SECRET"];
 for (const envVar of requiredEnv) {
   if (!process.env[envVar]) {
     console.error(`Γ¥î CRITICAL ERROR: Environment variable ${envVar} is missing.`);
@@ -503,8 +495,8 @@ const PORT = process.env.PORT || 5000;
 
 console.log("Checking ENV");
 console.log("MONGO_URI:", process.env.MONGO_URI ? "FOUND" : "MISSING");
-console.log("EMAIL_USER:", process.env.EMAIL_USER ? "FOUND" : "MISSING");
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "FOUND" : "MISSING");
+console.log("SMTP_USER:", process.env.SMTP_USER ? "FOUND" : "MISSING");
+console.log("SMTP_PASS:", process.env.SMTP_PASS ? "FOUND" : "MISSING");
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "FOUND" : "MISSING");
 
 async function startServer() {
