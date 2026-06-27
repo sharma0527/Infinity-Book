@@ -1,529 +1,367 @@
-require('dotenv').config();
+// server.js - Your Backend API Server (CORRECTED)
 
-// Standardize email env vars
-if (!process.env.EMAIL_USER && process.env.EMAIL) {
-  process.env.EMAIL_USER = process.env.EMAIL;
-}
-if (!process.env.EMAIL_PASS && process.env.EMAIL_PASSWORD) {
-  process.env.EMAIL_PASS = process.env.EMAIL_PASSWORD;
-}
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
 
-// Strict ENV Validation
-const requiredEnv = ["MONGO_URI", "EMAIL_USER", "EMAIL_PASS", "JWT_SECRET"];
-for (const envVar of requiredEnv) {
-  if (!process.env[envVar]) {
-    console.error(`❌ CRITICAL ERROR: Environment variable ${envVar} is missing.`);
-    process.exit(1);
-  }
-}
-
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const path = require('path');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const connectDB = require('./config/db');
-
-const authRoutes = require('./routes/auth');
-const historyRoutes = require('./routes/history');
+// ✅ Load environment variables
+dotenv.config();
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
+// ✅ Import your models and services
+const User = require("./models/User");
+const Otp = require("./models/Otp");
+const { sendOTP, sendWelcomeEmail } = require("./services/emailService");
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  message: { error: 'Too many requests from this IP. Please try again after 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-app.use('/api/auth', authLimiter);
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://infinity-book.pages.dev"
-];
-
-// Dynamically add environment defined origins
-if (process.env.FRONTEND_URL) {
-  process.env.FRONTEND_URL.split(',').forEach(url => {
-    const trimmed = url.trim();
-    if (trimmed && !allowedOrigins.includes(trimmed)) {
-      allowedOrigins.push(trimmed);
-    }
-  });
-}
-if (process.env.CORS_ORIGIN) {
-  process.env.CORS_ORIGIN.split(',').forEach(url => {
-    const trimmed = url.trim();
-    if (trimmed && !allowedOrigins.includes(trimmed)) {
-      allowedOrigins.push(trimmed);
-    }
-  });
-}
-
-const corsMiddleware = cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    // Allow if matches localhost, standard cloudflare pages subdomains, render subdomains, or explicit origins
-    const isAllowed = allowedOrigins.includes(origin) || 
-                      origin.endsWith(".pages.dev") || 
-                      origin.endsWith(".onrender.com") ||
-                      origin.includes("localhost:");
-    if (isAllowed) {
-      return callback(null, true);
-    }
-    return callback(new Error("Not allowed by CORS"));
-  },
+// ============================================================
+// ✅ FIX #1: CORS CONFIGURATION
+// ============================================================
+const corsOptions = {
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5000",
+    "https://infinity-book-1.onrender.com",
+    "https://infinity-book.pages.dev",
+    process.env.FRONTEND_URL || ""
+  ].filter(Boolean),
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Origin",
-    "X-Requested-With",
-    "Content-Type",
-    "Accept",
-    "Authorization"
-  ]
-});
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200
+};
 
-app.use(corsMiddleware);
-app.options('*any', corsMiddleware);
+app.use(cors(corsOptions));
 
+// Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: ['https://8e780c41.infinity-book.pages.dev', 'http://localhost:5173', 'http://localhost:3000', '*'],
-    methods: ["GET", "POST", "OPTIONS"]
-  }
-});
+// ============================================================
+// ✅ Database Connection
+// ============================================================
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log("✅ MongoDB Connected"))
+  .catch((err) => console.error("❌ MongoDB Error:", err));
 
-mongoose.connection.on("connected", () => {
-  console.log("✅ MongoDB Reconnected");
-});
+// ============================================================
+// ✅ ROUTE 1: SEND OTP (FIXED)
+// ============================================================
+app.post("/api/auth/send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
 
-mongoose.connection.on("disconnected", () => {
-  console.log("⚠ MongoDB Disconnected");
-});
+    // Validation
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Email is required" 
+      });
+    }
 
-mongoose.connection.on("error", (err) => {
-  console.log("❌ MongoDB Error:", err);
-});
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        success: false,
+        error: "Invalid email format" 
+      });
+    }
 
-// Cache memory for real-time document sync. 
-// Note: When server reboots, active ephemeral cache restarts!
-const Book = require('./models/Book');
-const roomData = new Map();
-const activeRooms = new Map(); // roomId -> Map(socketId -> userObj)
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`📧 Generated OTP for ${email}: ${otp}`);
 
-io.on('connection', (socket) => {
-  console.log('User joined server stream:', socket.id);
+    // Delete any existing OTP for this email
+    await Otp.deleteMany({ email: email.toLowerCase() });
 
-  socket.on('join_document', async (data) => {
-    let roomId, user;
-    if (data && typeof data === 'object') {
-      roomId = data.roomId;
-      user = data.user;
+    // Create new OTP record (expires in 10 minutes)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await Otp.create({
+      email: email.toLowerCase(),
+      otp: otp,
+      expiresAt: expiresAt
+    });
+
+    console.log("💾 OTP saved to database");
+
+    // ✅ Send email using emailService
+    const emailSent = await sendOTP(email, otp);
+
+    if (emailSent) {
+      console.log("✅ OTP Email sent successfully");
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent to your email",
+        email: email,
+        // Remove in production
+        testOTP: process.env.NODE_ENV === "development" ? otp : undefined
+      });
     } else {
-      roomId = data;
+      console.error("❌ Failed to send OTP email");
+      return res.status(500).json({
+        success: false,
+        error: "Failed to send OTP. Please try again."
+      });
+    }
+  } catch (error) {
+    console.error("❌ Send OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
+});
+
+// ============================================================
+// ✅ ROUTE 2: VERIFY OTP (FIXED)
+// ============================================================
+app.post("/api/auth/verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    // Validation
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and OTP are required"
+      });
     }
 
-    if (!roomId) return;
+    // Find OTP record
+    const otpRecord = await Otp.findOne({
+      email: email.toLowerCase(),
+      otp: otp.trim()
+    });
 
-    socket.join(roomId);
-    socket.roomId = roomId;
-
-    // Presence tracking
-    if (!activeRooms.has(roomId)) {
-      activeRooms.set(roomId, new Map());
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid OTP"
+      });
     }
-    const roomUsers = activeRooms.get(roomId);
-    
-    const userProfile = {
-      id: socket.id,
-      name: user?.name || 'Guest',
-      email: user?.email || 'guest@infinity.book',
-      picture: user?.picture || '',
-      avatar: (user?.name || 'G').charAt(0).toUpperCase()
-    };
-    roomUsers.set(socket.id, userProfile);
-    
-    console.log(`Client ${socket.id} (${userProfile.name}) manifested Document ${roomId}`);
 
-    // Broadcast updated presence list
-    io.to(roomId).emit('presence_change', Array.from(roomUsers.values()));
+    // Check if OTP expired
+    if (new Date() > otpRecord.expiresAt) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(400).json({
+        success: false,
+        error: "OTP has expired. Please request a new one."
+      });
+    }
 
-    // Push the active collaborative state back to the newly joined member instantly
-    if (roomData.has(roomId)) {
-      socket.emit('init_sync', roomData.get(roomId));
+    // ✅ Find or create user
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      user = new User({
+        email: email.toLowerCase(),
+        name: req.body.name || "",
+        verified: true,
+        lastLogin: new Date()
+      });
+      await user.save();
+      console.log("✅ New user created:", email);
+
+      // Send welcome email
+      if (req.body.name) {
+        await sendWelcomeEmail(email, req.body.name);
+      }
     } else {
-      try {
-        const book = await Book.findById(roomId);
-        if (book && book.content && book.content.length > 0) {
-          roomData.set(roomId, book.content);
-          socket.emit('init_sync', book.content);
-        } else {
-          const initialPages = [{ html: "", strokes: [] }];
-          roomData.set(roomId, initialPages);
-          socket.emit('init_sync', initialPages);
-        }
-      } catch (err) {
-        console.error("Error loading book on join:", err);
-        const initialPages = [{ html: "", strokes: [] }];
-        socket.emit('init_sync', initialPages);
-      }
+      // Update existing user
+      user.verified = true;
+      user.lastLogin = new Date();
+      await user.save();
+      console.log("✅ User verified:", email);
     }
-  });
 
-  socket.on('update_pages', async (latestPagesArray) => {
-    if (socket.roomId) {
-      // Overwrite ephemeral document storage so late joiners don't miss data
-      roomData.set(socket.roomId, latestPagesArray);
+    // Delete used OTP
+    await Otp.deleteOne({ _id: otpRecord._id });
 
-      // Blast changes directly to all other collaborators in the room
-      socket.to(socket.roomId).emit('sync_pages', latestPagesArray);
+    // Generate JWT token (if you use JWT)
+    const token = require("jsonwebtoken").sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "7d" }
+    );
 
-      // Asynchronously persist the changes to MongoDB
-      try {
-        await Book.findOneAndUpdate(
-          { _id: socket.roomId },
-          { content: latestPagesArray },
-          { upsert: true, new: true }
-        );
-      } catch (err) {
-        console.error("Error autosaving book content to DB:", err);
-      }
-    }
-  });
-
-  socket.on('join_chat', (chatId) => {
-    socket.join(chatId);
-    socket.chatId = chatId;
-    console.log(`Client ${socket.id} entered collaborative AI Chat ${chatId}`);
-
-    if (roomData.has(chatId)) {
-      socket.emit('init_chat_sync', roomData.get(chatId));
-    }
-  });
-
-  socket.on('update_chat', ({ chatId, messages }) => {
-    if (chatId) {
-      roomData.set(chatId, messages);
-      socket.to(chatId).emit('sync_chat', messages);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected from stream:', socket.id);
-    if (socket.roomId && activeRooms.has(socket.roomId)) {
-      const roomUsers = activeRooms.get(socket.roomId);
-      roomUsers.delete(socket.id);
-      if (roomUsers.size === 0) {
-        activeRooms.delete(socket.roomId);
-      } else {
-        io.to(socket.roomId).emit('presence_change', Array.from(roomUsers.values()));
-      }
-    }
-  });
+    res.status(200).json({
+      success: true,
+      message: "Login successful",
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture
+      },
+      token: token
+    });
+  } catch (error) {
+    console.error("❌ Verify OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/history', historyRoutes);
+// ============================================================
+// ✅ ROUTE 3: SIGNUP (ALTERNATIVE ROUTE)
+// ============================================================
+app.post("/api/auth/signup", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
 
-// Health Route for keep-warm pings
-app.get('/health', (req, res) => {
-  res.json({ status: "ok", timestamp: Date.now() });
+    if (!email || !name) {
+      return res.status(400).json({
+        success: false,
+        error: "Name and email are required"
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: "Email already registered"
+      });
+    }
+
+    // Create user
+    const user = new User({
+      name,
+      email: email.toLowerCase(),
+      password: password || "passwordless",
+      verified: false
+    });
+
+    await user.save();
+
+    // Generate and send OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await Otp.create({
+      email: email.toLowerCase(),
+      otp,
+      expiresAt
+    });
+
+    const emailSent = await sendOTP(email, otp);
+
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to send OTP"
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Account created. Please verify your email.",
+      email: email
+    });
+  } catch (error) {
+    console.error("❌ Signup Error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to create account"
+    });
+  }
 });
 
-const Chat = require('./models/Chat');
+// ============================================================
+// ✅ ROUTE 4: RESEND OTP
+// ============================================================
+app.post("/api/auth/resend-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
 
-// Local Intelligent Fallback Engine when no OpenRouter API keys are configured or all keys fail
-function streamMockResponse(res, messages) {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  const answer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
-
-  const words = answer.split(' ');
-  let wordIndex = 0;
-
-  const interval = setInterval(() => {
-    if (wordIndex < words.length) {
-      const chunk = words[wordIndex] + (wordIndex === words.length - 1 ? '' : ' ');
-      const data = {
-        choices: [
-          {
-            delta: {
-              content: chunk
-            }
-          }
-        ]
-      };
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-      wordIndex++;
-    } else {
-      res.write('data: [DONE]\n\n');
-      res.end();
-      clearInterval(interval);
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "Email is required"
+      });
     }
-  }, 50); // 50ms per word is perfect, speedy and feels very premium!
-}
 
+    // Delete old OTP
+    await Otp.deleteMany({ email: email.toLowerCase() });
 
-// Provider streaming handler
-async function streamFromProvider(res, messages, provider) {
-  const isGroq = provider === 'groq';
-  const apiKey = isGroq ? process.env.GROQ_API_KEY : process.env.OPENROUTER_API_KEY;
-  const endpoint = isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
-  const model = isGroq ? 'llama-3.3-70b-versatile' : 'meta-llama/llama-3.3-70b-instruct:free';
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  if (!apiKey) {
-    throw new Error(`No API key configured for ${provider}`);
-  }
+    await Otp.create({
+      email: email.toLowerCase(),
+      otp,
+      expiresAt
+    });
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`
-  };
+    const emailSent = await sendOTP(email, otp);
 
-  if (!isGroq) {
-    headers['HTTP-Referer'] = 'https://infinity-book.pages.dev';
-    headers['X-Title'] = 'Infinity Book';
-  }
-
-  console.log(`[${provider.toUpperCase()}] Attempting streaming chat completion using model ${model}...`);
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: model,
-      messages: messages,
-      temperature: 0.7,
-      stream: true
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`${provider.toUpperCase()} HTTP error ${response.status}: ${errorText}`);
-  }
-
-  // Configure SSE response headers (if not already sent)
-  if (!res.headersSent) {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder("utf-8");
-  let done = false;
-  let fullResponseText = "";
-
-  while (!done) {
-    const { value, done: doneReading } = await reader.read();
-    done = doneReading;
-    if (value) {
-      res.write(value);
-      const chunkStr = decoder.decode(value, { stream: true });
-      const lines = chunkStr.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-          try {
-            const parsed = JSON.parse(line.substring(6));
-            if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
-              fullResponseText += parsed.choices[0].delta.content;
-            }
-          } catch (e) {
-            // Ignore parse errors on partial chunks
-          }
-        }
-      }
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        error: "Failed to resend OTP"
+      });
     }
+
+    res.status(200).json({
+      success: true,
+      message: "OTP resent to your email"
+    });
+  } catch (error) {
+    console.error("❌ Resend OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to resend OTP"
+    });
   }
-
-  res.end();
-  return fullResponseText;
-}
-
-
-// Streaming Chat Endpoint with Groq API Failover Pool and Local Mock Fallback
-app.post('/api/chat', async (req, res) => {
-  let { messages, chatId, userId } = req.body;
-  if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ error: "Invalid messages array." });
-  }
-
-  // Save the latest user message to DB
-  const lastUserMsg = messages[messages.length - 1];
-  if (lastUserMsg && lastUserMsg.role === 'user' && chatId && userId) {
-      try {
-          await Chat.create({
-              userId,
-              chatId,
-              role: 'user',
-              message: lastUserMsg.content
-          });
-      } catch (err) {
-          console.error("DB Save Error:", err);
-      }
-  }
-
-  // Inject the required Infinity AI System Persona if not already present
-  const systemPrompt = `You are Infinity AI, an advanced AI assistant specialized in education, programming, research, productivity, writing, and problem solving.
-
-Provide accurate, detailed, well-structured answers.
-
-When explaining concepts:
-* Start with a simple explanation.
-* Then provide technical details.
-* Give examples whenever useful.
-
-For coding questions:
-* Provide complete working code.
-* Explain important parts.
-* Suggest best practices.
-
-For career and learning questions:
-* Give practical step-by-step guidance.
-
-Always prioritize correctness, clarity, and usefulness.`;
-
-  if (messages.length === 0 || messages[0].role !== 'system') {
-    messages = [{ role: 'system', content: systemPrompt }, ...messages];
-  }
-
-  let fullResponseText = "";
-  let success = false;
-
-  // 1. Try OpenRouter First
-  if (process.env.OPENROUTER_API_KEY) {
-    try {
-      fullResponseText = await streamFromProvider(res, messages, 'openrouter');
-      success = true;
-    } catch (err) {
-      console.error(`[OpenRouter] Failover trigger:`, err.message);
-    }
-  }
-
-  // 2. Try Groq Second (if OpenRouter skipped or failed)
-  if (!success && process.env.GROQ_API_KEY) {
-    try {
-      fullResponseText = await streamFromProvider(res, messages, 'groq');
-      success = true;
-    } catch (err) {
-      console.error(`[Groq] Failover trigger:`, err.message);
-    }
-  }
-
-  // 3. Fallback to Local Mock response if both providers failed
-  if (!success) {
-    console.warn(`[Failover] Both providers failed or keys are missing. Streaming local mock response.`);
-    const mockAnswer = `Hello! I am Infinity AI, your intelligent copilot. I am here to help you brainstorm and organize your book. You can:\n- Write and sketch collaboratively in real-time.\n- Manage multiple pages using the navigation arrows.\n- Export your work at any time.\n\nWhat would you like to build or discuss next?`;
-    if (chatId && userId) {
-        Chat.create({ userId, chatId, role: 'assistant', message: mockAnswer }).catch(console.error);
-    }
-    return streamMockResponse(res, messages);
-  }
-
-  // Save successful AI response to DB
-  if (chatId && userId && fullResponseText) {
-      Chat.create({
-          userId,
-          chatId,
-          role: 'assistant',
-          message: fullResponseText
-      }).catch(err => console.error("Failed to save assistant msg:", err));
-  }
-
-  return;
 });
 
-// Serve static files from the React frontend build
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// Test Route for deployment verification
-app.get('/test', (req, res) => {
+// ============================================================
+// ✅ HEALTH CHECK ENDPOINT
+// ============================================================
+app.get("/health", (req, res) => {
   res.json({
-    success: true,
-    message: "Backend working correctly"
+    status: "OK",
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV || "development"
   });
 });
 
-// Test Email Route for deployment verification
-app.get('/test-email', async (req, res) => {
-  try {
-    const { transporter } = require('./services/emailService');
-    const emailUser = process.env.EMAIL_USER || process.env.EMAIL;
-    const recipient = req.query.to || "yourpersonalemail@gmail.com";
-
-    await transporter.sendMail({
-      from: `"Infinity AI" <${emailUser}>`,
-      to: recipient,
-      subject: "Test Email",
-      text: "Infinity AI Email Working"
-    });
-
-    res.send(`Email successfully sent to ${recipient}! Check your inbox.`);
-  } catch (err) {
-    console.error("Test Email Error:", err);
-    res.status(500).send("Failed to send email: " + err.message);
-  }
-});
-
-// Fallback Route for Single Page Application
-app.get('*any', (req, res) => {
-  const indexPath = path.join(__dirname, '../frontend/dist/index.html');
-  require('fs').stat(indexPath, (err) => {
-    if (err) {
-      return res.status(200).send("Backend is running. API endpoints are available.");
-    }
-    res.sendFile(indexPath);
+// ============================================================
+// ✅ ERROR HANDLING
+// ============================================================
+app.use((err, req, res, next) => {
+  console.error("🔴 Error:", err);
+  res.status(500).json({
+    success: false,
+    error: "Internal server error"
   });
 });
 
+// ============================================================
+// ✅ START SERVER
+// ============================================================
 const PORT = process.env.PORT || 5000;
-
-console.log("Checking ENV");
-console.log("MONGO_URI:", process.env.MONGO_URI ? "FOUND" : "MISSING");
-console.log("EMAIL_USER:", process.env.EMAIL_USER ? "FOUND" : "MISSING");
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "FOUND" : "MISSING");
-console.log("JWT_SECRET:", process.env.JWT_SECRET ? "FOUND" : "MISSING");
-
-async function startServer() {
-  try {
-    console.log("Connecting to MongoDB...");
-    const conn = await connectDB();
-    if (!conn) {
-      throw new Error("MongoDB Connection Failed");
-    }
-    console.log("✅ MongoDB Connected Successfully.");
-
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error("❌ CRITICAL: Server failed to start:", err);
-    process.exit(1);
-  }
-}
-
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`❌ Port ${PORT} is already in use`);
-    process.exit(1);
-  } else {
-    console.error(err);
-  }
+app.listen(PORT, () => {
+  console.log(`
+╔════════════════════════════════════════╗
+║   🚀 Infinity AI Server Running        ║
+╠════════════════════════════════════════╣
+║   Port: ${PORT}                            ║
+║   Environment: ${process.env.NODE_ENV || "development"}           ║
+║   MongoDB: ${process.env.MONGODB_URI ? "✅ Connected" : "❌ Not configured"}  ║
+║   Email Service: ${process.env.BREVO_API_KEY ? "✅ Brevo" : process.env.RESEND_API_KEY ? "✅ Resend" : process.env.SENDGRID_API_KEY ? "✅ SendGrid" : "❌ Not configured"} ║
+╚════════════════════════════════════════╝
+  `);
 });
 
-startServer();
+module.exports = app;
