@@ -68,6 +68,8 @@
         window.fbDoc = doc;
         window.fbSetDoc = setDoc;
         window.fbGetDoc = getDoc;
+        
+        window.dispatchEvent(new Event('firebase-ready'));
     </script>
 
     <!-- Marked.js for Markdown -->
@@ -1293,28 +1295,30 @@
 
         
         // Setup Firebase Auth State Listener
-        window.fbOnAuthStateChanged(window.fbAuth, (user) => {
-            if (user) {
-                // User is signed in
-                userEmail = user.email;
-                userName = user.displayName || user.email.split('@')[0];
-                authToken = user.accessToken; // legacy compat
-                
-                // Fetch history from Firestore
-                fetchHistory();
-                updateAuthUI();
-                renderProjects();
-                renderSidebarHistory();
-            } else {
-                // User is signed out
-                userEmail = null;
-                userName = null;
-                authToken = null;
-                chatHistoryDb = {};
-                projectsDb = [];
-                activeProject = null;
-                updateAuthUI();
-            }
+        window.addEventListener('firebase-ready', () => {
+            window.fbOnAuthStateChanged(window.fbAuth, (user) => {
+                if (user) {
+                    // User is signed in
+                    userEmail = user.email;
+                    userName = user.displayName || user.email.split('@')[0];
+                    authToken = user.accessToken; // legacy compat
+                    
+                    // Fetch history from Firestore
+                    fetchHistory();
+                    updateAuthUI();
+                    renderProjects();
+                    renderSidebarHistory();
+                } else {
+                    // User is signed out
+                    userEmail = null;
+                    userName = null;
+                    authToken = null;
+                    chatHistoryDb = {};
+                    projectsDb = [];
+                    activeProject = null;
+                    updateAuthUI();
+                }
+            });
         });
 
         let guestChatCount = 0;
