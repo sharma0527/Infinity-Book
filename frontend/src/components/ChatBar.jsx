@@ -3,6 +3,8 @@ import { Send, Type, PenTool, Edit2, Highlighter, Mic, ImagePlus, Home, Settings
 import Dock from './Dock';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'motion/react';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "../firebase";
 
 const FONTS = [
   'Caveat', 'Dancing Script', 'Indie Flower', 
@@ -46,13 +48,23 @@ export default function ChatBar({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const insertImageFile = (file) => {
+  const insertImageFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (addImage) addImage(ev.target.result, file.name);
-    };
-    reader.readAsDataURL(file);
+    
+    try {
+      const storageRef = ref(storage, `notebook-images/${Date.now()}-${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      if (addImage) addImage(url, file.name);
+    } catch (err) {
+      console.error("Error uploading image to Firebase Storage:", err);
+      // Fallback to local DataURL if Firebase fails
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (addImage) addImage(ev.target.result, file.name);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleFileChange = (e) => {

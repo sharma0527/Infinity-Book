@@ -10,6 +10,10 @@ import HomePage from "./components/HomePage";
 import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon, LogOut } from "lucide-react";
 import { io } from "socket.io-client";
 
+import AuthModal from "./components/AuthModal";
+import { auth } from "./firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+
 import { API_URL } from "./config/api";
 
 // Expose the resolved API URL dynamically to the window object so the Chatbot iframe can read it
@@ -61,7 +65,23 @@ export default function App() {
     return [{ html: "", strokes: [] }];
   };
 
-  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('infinity_token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+      if (user) {
+        localStorage.setItem('infinity_name', user.displayName || user.email.split('@')[0]);
+        localStorage.setItem('infinity_email', user.email);
+      } else {
+        localStorage.removeItem('infinity_name');
+        localStorage.removeItem('infinity_email');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [pages, setPages] = useState(getInitialPages);
   const [current, setCurrent] = useState(0);
   const [view, setView] = useState(() => {
@@ -90,7 +110,12 @@ export default function App() {
     setView('notebook');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Error logging out", error);
+    }
     localStorage.removeItem('infinity_token');
     localStorage.removeItem('infinity_name');
     localStorage.removeItem('infinity_email');
@@ -494,15 +519,7 @@ export default function App() {
                 </button>
               ) : (
                 <button 
-                  onClick={() => {
-                    setAiPanelOpen(true);
-                    setTimeout(() => {
-                      const iframe = document.querySelector('iframe[title="Infinity Intelligence Chat"]');
-                      if (iframe && iframe.contentWindow) {
-                        iframe.contentWindow.postMessage({ type: 'TRIGGER_LOGIN' }, '*');
-                      }
-                    }, 500);
-                  }} 
+                  onClick={() => setIsAuthModalOpen(true)} 
                   style={{ ...styles.homeBtn, background: 'linear-gradient(135deg, #10a37f, #3b82f6)', border: 'none', width: '100%', justifyContent: 'center' }} 
                   title="Sign In"
                 >
@@ -515,6 +532,10 @@ export default function App() {
 
           {/* MAIN CONTENT AREA */}
           <div style={styles.mainContentWrap}>
+            <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onSuccess={() => {
+              setIsAuthModalOpen(false);
+              handleLogin();
+            }} />
             <SaveMenu pages={pages} current={current} />
 
             {/* SHARE MENU */}
