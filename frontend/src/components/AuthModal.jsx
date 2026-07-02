@@ -1,31 +1,117 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, ArrowRight, Loader } from 'lucide-react';
-import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, googleProvider, db } from '../firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signInWithPopup, signOut } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function AuthModal({ isOpen, onClose, onSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleAuth = async () => {
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+          provider: 'google',
+          emailVerified: user.emailVerified,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        });
+      } else {
+        await setDoc(userRef, { lastLogin: new Date().toISOString() }, { merge: true });
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(err.message.replace('Firebase: ', ''));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setLoading(true);
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+        
+        if (!user.emailVerified) {
+          await signOut(auth);
+          throw new Error("Please verify your email before logging in.");
+        }
+        
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+           await setDoc(userRef, {
+             uid: user.uid,
+             name: user.email.split('@')[0],
+             email: user.email,
+             photoURL: "",
+             provider: 'password',
+             emailVerified: true,
+             createdAt: new Date().toISOString(),
+             lastLogin: new Date().toISOString()
+           });
+        } else {
+           await setDoc(userRef, { lastLogin: new Date().toISOString() }, { merge: true });
+        }
+
+        onSuccess();
+        onClose();
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-        // Optionally update the user's profile with their name here
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match.");
+        }
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        const user = result.user;
+        
+        await sendEmailVerification(user);
+        
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          name: name,
+          email: user.email,
+          photoURL: "",
+          provider: 'password',
+          emailVerified: false,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        });
+
+        await signOut(auth);
+        setSuccessMsg("Verification email sent. Please check your inbox.");
+        setIsLogin(true); // Switch to login to wait for verification
+        setPassword('');
+        setConfirmPassword('');
       }
-      onSuccess();
-      onClose();
     } catch (err) {
       console.error(err);
       setError(err.message.replace('Firebase: ', ''));
@@ -60,12 +146,32 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
               <div style={styles.iconContainer}>
                 <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', lineHeight: '20px' }}>∞</span>
               </div>
-              <h2 style={styles.title}>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+              <h2 style={styles.title}>{isLogin ? 'Infinity AI' : 'Create Account'}</h2>
               <p style={styles.subtitle}>
                 {isLogin 
                   ? 'Sign in to access your infinite canvas.' 
                   : 'Join Infinity Book and start creating.'}
               </p>
+            </div>
+
+            <button 
+              type="button" 
+              onClick={handleGoogleAuth} 
+              disabled={loading}
+              style={styles.googleButton}
+            >
+              <img 
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                alt="Google" 
+                style={{ width: '18px', height: '18px' }} 
+              />
+              Continue with Google
+            </button>
+
+            <div style={styles.divider}>
+              <div style={styles.dividerLine} />
+              <span style={styles.dividerText}>OR</span>
+              <div style={styles.dividerLine} />
             </div>
 
             <form onSubmit={handleSubmit} style={styles.form}>
@@ -107,14 +213,34 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
 
+              {!isLogin && (
+                <div style={styles.inputGroup}>
+                  <Lock size={18} color="#94a3b8" style={styles.inputIcon} />
+                  <input
+                    type="password"
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={styles.input}
+                    required={!isLogin}
+                  />
+                </div>
+              )}
+
               {error && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.error}>
                   {error}
                 </motion.div>
               )}
 
+              {successMsg && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.success}>
+                  {successMsg}
+                </motion.div>
+              )}
+
               <button type="submit" disabled={loading} style={styles.submitButton}>
-                {loading ? <Loader size={20} className="spin" /> : <span>{isLogin ? 'Sign In' : 'Sign Up'}</span>}
+                {loading ? <Loader size={20} className="spin" /> : <span>{isLogin ? 'Sign In' : 'Create Account'}</span>}
                 {!loading && <ArrowRight size={18} />}
               </button>
             </form>
@@ -127,10 +253,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess }) {
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setError('');
+                    setSuccessMsg('');
                   }} 
                   style={styles.toggleButton}
                 >
-                  {isLogin ? 'Sign up' : 'Log in'}
+                  {isLogin ? 'Create Account' : 'Sign In'}
                 </button>
               </p>
             </div>
@@ -172,6 +299,8 @@ const styles = {
     padding: '40px 32px',
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
     zIndex: 1,
+    maxHeight: '90vh',
+    overflowY: 'auto'
   },
   closeButton: {
     position: 'absolute',
@@ -213,6 +342,40 @@ const styles = {
     color: '#94a3b8',
     fontSize: '14px',
   },
+  googleButton: {
+    width: '100%',
+    background: '#fff',
+    color: '#1e293b',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '12px',
+    fontSize: '15px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    cursor: 'pointer',
+    marginBottom: '24px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    transition: 'transform 0.1s',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    marginBottom: '24px',
+  },
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    background: 'rgba(255, 255, 255, 0.1)',
+  },
+  dividerText: {
+    color: '#94a3b8',
+    padding: '0 16px',
+    fontSize: '12px',
+    fontWeight: '600',
+  },
   form: {
     display: 'flex',
     flexDirection: 'column',
@@ -246,6 +409,15 @@ const styles = {
     padding: '10px 12px',
     borderRadius: '8px',
     border: '1px solid rgba(239, 68, 68, 0.2)',
+  },
+  success: {
+    color: '#10b981',
+    fontSize: '13px',
+    background: 'rgba(16, 185, 129, 0.1)',
+    padding: '10px 12px',
+    borderRadius: '8px',
+    border: '1px solid rgba(16, 185, 129, 0.2)',
+    textAlign: 'center'
   },
   submitButton: {
     background: 'linear-gradient(135deg, #10a37f, #3b82f6)',

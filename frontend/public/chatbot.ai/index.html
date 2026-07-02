@@ -38,6 +38,38 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="./socket.io.min.js"></script>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAt9vtBVggTyY0fIyIRYB33QqXPOcvMjoE",
+            authDomain: "infinity-ai-e26ac.firebaseapp.com",
+            projectId: "infinity-ai-e26ac",
+            storageBucket: "infinity-ai-e26ac.firebasestorage.app",
+            messagingSenderId: "267652675822",
+            appId: "1:267652675822:web:8213521b2475564e0f1bff",
+            measurementId: "G-QRLCCDRN2E"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        window.fbAuth = getAuth(app);
+        window.fbGoogleProvider = new GoogleAuthProvider();
+        window.fbDb = getFirestore(app);
+        
+        window.fbSignInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.fbCreateUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.fbSendEmailVerification = sendEmailVerification;
+        window.fbSignInWithPopup = signInWithPopup;
+        window.fbSignOut = signOut;
+        window.fbOnAuthStateChanged = onAuthStateChanged;
+        
+        window.fbDoc = doc;
+        window.fbSetDoc = setDoc;
+        window.fbGetDoc = getDoc;
+    </script>
+
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
@@ -1029,11 +1061,21 @@
 
                 <!-- LOGIN FORM -->
                 <div id="form-login" class="space-y-3">
+                    <button type="button" onclick="handleGoogleAuth()"
+                        class="w-full py-3 bg-white hover:bg-gray-50 rounded-xl text-sm font-bold text-gray-800 transition-all duration-200 flex items-center justify-center gap-3 shadow border border-gray-200">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
+                        Continue with Google
+                    </button>
+                    <div class="flex items-center gap-3 my-2">
+                        <div class="h-px bg-white/10 flex-1"></div>
+                        <span class="text-xs text-textSecondary uppercase font-medium">Or</span>
+                        <div class="h-px bg-white/10 flex-1"></div>
+                    </div>
                     <div>
                         <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email
                             Address</label>
-                        <input type="email" id="login-email" placeholder="name@gmail.com" class="auth-input" />
+                        <input type="email" id="login-email" placeholder="name@example.com" class="auth-input" />
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
@@ -1065,6 +1107,16 @@
 
                 <!-- SIGNUP FORM -->
                 <div id="form-signup" class="space-y-3 hidden">
+                    <button type="button" onclick="handleGoogleAuth()"
+                        class="w-full py-3 bg-white hover:bg-gray-50 rounded-xl text-sm font-bold text-gray-800 transition-all duration-200 flex items-center justify-center gap-3 shadow border border-gray-200">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5" alt="Google">
+                        Continue with Google
+                    </button>
+                    <div class="flex items-center gap-3 my-2">
+                        <div class="h-px bg-white/10 flex-1"></div>
+                        <span class="text-xs text-textSecondary uppercase font-medium">Or</span>
+                        <div class="h-px bg-white/10 flex-1"></div>
+                    </div>
                     <div>
                         <label
                             class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Full
@@ -1073,9 +1125,9 @@
                     </div>
                     <div>
                         <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail
+                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email
                             Address</label>
-                        <input type="email" id="signup-email" placeholder="name@gmail.com" class="auth-input" />
+                        <input type="email" id="signup-email" placeholder="name@example.com" class="auth-input" />
                     </div>
                     <div>
                         <label
@@ -1108,7 +1160,7 @@
                         class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
                         <span id="signup-btn-spinner"
                             class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="signup-btn-text">Send Verification Code</span>
+                        <span id="signup-btn-text">Create Account</span>
                     </button>
                     <p class="text-center text-xs text-textSecondary mt-4">
                         Already have an account? <button type="button" onclick="switchAuthMode('login')"
@@ -1116,115 +1168,14 @@
                     </p>
                 </div>
 
-                <!-- FORGOT PASSWORD FORM -->
+                <!-- FORGOT PASSWORD FORM (REMOVED LOGIC) -->
                 <div id="form-forgot" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset
-                        code.</p>
-                    <div>
-                        <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Gmail
-                            Address</label>
-                        <input type="email" id="forgot-email" placeholder="name@gmail.com" class="auth-input" />
-                    </div>
-                    <button id="forgot-btn" onclick="handleForgotSubmit()"
-                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
-                        <span id="forgot-btn-spinner"
-                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="forgot-btn-text">Send Reset Code</span>
-                    </button>
+                    <p class="text-xs text-textSecondary mb-2">Password reset is currently only supported via the main Infinity App.</p>
                     <button type="button" onclick="switchAuthMode('login')"
-                        class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Back to Login
+                        class="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold text-white transition-all duration-200 mt-2">
+                        Back to Login
                     </button>
                 </div>
-
-                <!-- OTP VERIFICATION - SIGNUP -->
-                <div id="form-otp-signup" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary text-center mb-2">
-                        Verification code sent to <span id="otp-signup-sent-email"
-                            class="text-white font-semibold"></span>
-                    </p>
-                    <div>
-                        <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit
-                            Code</label>
-                        <input type="text" id="signup-otp" placeholder="••••••"
-                            class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
-                    </div>
-                    <button id="otp-signup-btn" onclick="completeSignup()"
-                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
-                        <span id="otp-signup-btn-spinner"
-                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="otp-signup-btn-text">Verify &amp; Create Account</span>
-                    </button>
-                    <p class="text-xs text-textSecondary text-center mt-3" id="signup-resend-container">
-                        Didn't receive code? <button type="button" onclick="resendOtp('signup')" id="signup-resend-btn"
-                            class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold"
-                            disabled>Resend in 60s</button>
-                    </p>
-                    <button type="button" onclick="switchAuthMode('signup')"
-                        class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Change Email
-                    </button>
-                </div>
-
-                <!-- OTP VERIFICATION & RESET - FORGOT PASSWORD -->
-                <div id="form-otp-forgot" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary text-center mb-2">
-                        Reset code sent to <span id="otp-forgot-sent-email" class="text-white font-semibold"></span>
-                    </p>
-                    <div>
-                        <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider text-center">6-Digit
-                            Code</label>
-                        <input type="text" id="forgot-otp" placeholder="••••••"
-                            class="auth-input text-center font-bold tracking-widest text-lg" maxLength="6" />
-                    </div>
-                    <div>
-                        <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Create
-                            New Password</label>
-                        <div class="relative">
-                            <input type="password" id="forgot-password"
-                                oninput="checkForgotPasswordStrength(this.value)" placeholder="••••••••"
-                                class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('forgot-password')"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
-                                <i data-lucide="eye" class="w-4 h-4" id="forgot-password-eye"></i>
-                            </button>
-                        </div>
-                        <div id="forgot-password-feedback" class="text-[10px] mt-1 text-red-400 hidden"></div>
-                    </div>
-                    <div>
-                        <label
-                            class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Confirm
-                            New Password</label>
-                        <div class="relative">
-                            <input type="password" id="forgot-confirm-password" placeholder="••••••••"
-                                class="auth-input pr-10" />
-                            <button type="button" onclick="togglePasswordVisibility('forgot-confirm-password')"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-white transition-colors">
-                                <i data-lucide="eye" class="w-4 h-4" id="forgot-confirm-password-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <button id="otp-forgot-btn" onclick="completeReset()"
-                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20">
-                        <span id="otp-forgot-btn-spinner"
-                            class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                        <span id="otp-forgot-btn-text">Reset Password &amp; Login</span>
-                    </button>
-                    <p class="text-xs text-textSecondary text-center mt-3" id="forgot-resend-container">
-                        Didn't receive code? <button type="button" onclick="resendOtp('forgot')" id="forgot-resend-btn"
-                            class="text-accent hover:underline disabled:opacity-50 disabled:no-underline font-semibold"
-                            disabled>Resend in 60s</button>
-                    </p>
-                    <button type="button" onclick="switchAuthMode('forgot')"
-                        class="w-full text-xs text-textSecondary hover:text-white transition-colors flex items-center justify-center gap-1 mt-1">
-                        ← Change Email
-                    </button>
-                </div>
-
             </div>
 
             <!-- Hidden Custom Backend URL field to satisfy existing codebase structure -->
@@ -1774,7 +1725,7 @@
             successDiv.classList.add('hidden');
 
             const name = document.getElementById('signup-name').value.trim();
-            let email = document.getElementById('signup-email').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
             const confirmPassword = document.getElementById('signup-confirm-password').value;
 
@@ -1783,14 +1734,7 @@
                 return;
             }
             if (!email) {
-                showError('Please enter your Gmail address.');
-                return;
-            }
-            if (!email.includes('@')) {
-                email = email + '@gmail.com';
-            }
-            if (!isValidGmail(email)) {
-                showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
+                showError('Please enter your email address.');
                 return;
             }
 
@@ -1805,32 +1749,42 @@
                 return;
             }
 
-            authTempName = name;
-            authTempEmail = email.toLowerCase();
-            authTempPassword = password;
-
-            setButtonLoading('signup-btn', true, 'Sending Code...');
-            showSuccess('Sending verification code...');
+            setButtonLoading('signup-btn', true, 'Creating Account...');
+            showSuccess('Creating account...');
 
             try {
-                const response = await fetch(`${API_URL}/auth/send-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email: authTempEmail, requestType: 'signup' })
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'Failed to send verification code.');
-                    setButtonLoading('signup-btn', false, 'Create Account');
-                } else {
-                    showSuccess(data.message || 'Verification code sent successfully.');
-                    setButtonLoading('signup-btn', false, 'Create Account');
-                    switchAuthMode('otp-signup');
-                    startResendCountdown('signup');
+                const userCredential = await window.fbCreateUserWithEmailAndPassword(window.fbAuth, email, password);
+                
+                await window.fbSendEmailVerification(userCredential.user);
+
+                try {
+                    await window.fbSetDoc(window.fbDoc(window.fbDb, "users", userCredential.user.uid), {
+                        name: name,
+                        email: email,
+                        createdAt: new Date(),
+                        authProvider: 'email'
+                    });
+                } catch (e) {
+                    console.error("Error creating user document", e);
                 }
+
+                showSuccess('Account created! Please check your email to verify your account.');
+                setButtonLoading('signup-btn', false, 'Create Account');
+                
+                await window.fbSignOut(window.fbAuth);
+                
+                setTimeout(() => {
+                    switchAuthMode('login');
+                }, 3000);
             } catch (err) {
-                showError('Network error. Please check your connection.');
+                console.error(err);
+                if (err.code === 'auth/configuration-not-found') {
+                    showError('Error: Firebase Authentication is not configured. Please enable Email/Password provider in the Firebase Console.');
+                } else if (err.code === 'auth/email-already-in-use') {
+                    showError('This email is already in use.');
+                } else {
+                    showError(err.message || 'Failed to create account.');
+                }
                 setButtonLoading('signup-btn', false, 'Create Account');
             }
         }
@@ -1840,7 +1794,7 @@
             const password = document.getElementById('login-password').value;
 
             if (!email || !password) {
-                showError('Please enter both Gmail address and password.');
+                showError('Please enter both email address and password.');
                 return;
             }
 
@@ -1848,27 +1802,89 @@
             showSuccess('Logging in...');
 
             try {
-                const response = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'Incorrect Gmail address or password.');
+                const userCredential = await window.fbSignInWithEmailAndPassword(window.fbAuth, email, password);
+                
+                if (!userCredential.user.emailVerified) {
+                    await window.fbSignOut(window.fbAuth);
+                    showError('Please verify your email address before logging in.');
                     setButtonLoading('login-btn', false, 'Login');
                     return;
                 }
+                
+                let name = userCredential.user.displayName || email.split('@')[0];
+                let picture = userCredential.user.photoURL;
+                try {
+                    const docSnap = await window.fbGetDoc(window.fbDoc(window.fbDb, "users", userCredential.user.uid));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.name) name = data.name;
+                    }
+                } catch (e) {
+                    console.error("Error fetching user profile", e);
+                }
 
-                saveSessionAndLogin(data, false);
+                saveSessionAndLogin({
+                    token: userCredential.user.accessToken,
+                    email: userCredential.user.email,
+                    name: name,
+                    picture: picture
+                }, false);
+                
                 setButtonLoading('login-btn', false, 'Login');
             } catch (err) {
-                showError('Network error. Make sure the backend is running.');
+                console.error(err);
+                if (err.code === 'auth/configuration-not-found') {
+                    showError('Error: Firebase Authentication is not configured. Please enable Email/Password provider in the Firebase Console.');
+                } else if (err.code === 'auth/invalid-credential') {
+                    showError('Incorrect email or password.');
+                } else {
+                    showError(err.message || 'Login failed.');
+                }
                 setButtonLoading('login-btn', false, 'Login');
             }
         }
+        
+        window.handleGoogleAuth = async () => {
+            const errorDiv = document.getElementById('auth-error');
+            const successDiv = document.getElementById('auth-success');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+            
+            showSuccess('Connecting to Google...');
+            
+            try {
+                const result = await window.fbSignInWithPopup(window.fbAuth, window.fbGoogleProvider);
+                
+                const userRef = window.fbDoc(window.fbDb, "users", result.user.uid);
+                const docSnap = await window.fbGetDoc(userRef);
+                
+                if (!docSnap.exists()) {
+                    await window.fbSetDoc(userRef, {
+                        name: result.user.displayName,
+                        email: result.user.email,
+                        createdAt: new Date(),
+                        authProvider: 'google'
+                    });
+                }
+                
+                saveSessionAndLogin({
+                    token: result.user.accessToken,
+                    email: result.user.email,
+                    name: result.user.displayName || result.user.email.split('@')[0],
+                    picture: result.user.photoURL
+                }, false);
+                
+            } catch (err) {
+                console.error(err);
+                if (err.code === 'auth/configuration-not-found') {
+                    showError('Error: Firebase Authentication is not configured. Please enable Google provider in the Firebase Console.');
+                } else if (err.code !== 'auth/popup-closed-by-user') {
+                    showError(err.message || 'Google sign-in failed.');
+                } else {
+                    successDiv.classList.add('hidden');
+                }
+            }
+        };
 
         function saveSessionAndLogin(data, isSignup = false) {
             authToken = data.token;

@@ -70,11 +70,13 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-      if (user) {
+      // Require email verification for password users
+      if (user && (user.emailVerified || user.providerData.some(p => p.providerId === 'google.com'))) {
+        setIsAuthenticated(true);
         localStorage.setItem('infinity_name', user.displayName || user.email.split('@')[0]);
         localStorage.setItem('infinity_email', user.email);
       } else {
+        setIsAuthenticated(false);
         localStorage.removeItem('infinity_name');
         localStorage.removeItem('infinity_email');
       }
