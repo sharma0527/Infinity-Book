@@ -1285,7 +1285,37 @@
             localStorage.setItem('infinity_backend_url', savedBackendUrl.replace('infinity-book.onrender.com', 'infinity-book-1.onrender.com'));
         }
 
-        let API_URL = '/api';
+        // When hosted on Vercel/Cloudflare, we must use the absolute Firebase Function URL
+        // because static hosts return 405 for POST requests to /api
+        let API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? '/api' 
+            : 'https://us-central1-infinity-ai-e26ac.cloudfunctions.net';
+
+        
+        // Setup Firebase Auth State Listener
+        window.fbOnAuthStateChanged(window.fbAuth, (user) => {
+            if (user) {
+                // User is signed in
+                userEmail = user.email;
+                userName = user.displayName || user.email.split('@')[0];
+                authToken = user.accessToken; // legacy compat
+                
+                // Fetch history from Firestore
+                fetchHistory();
+                updateAuthUI();
+                renderProjects();
+                renderSidebarHistory();
+            } else {
+                // User is signed out
+                userEmail = null;
+                userName = null;
+                authToken = null;
+                chatHistoryDb = {};
+                projectsDb = [];
+                activeProject = null;
+                updateAuthUI();
+            }
+        });
 
         let guestChatCount = 0;
 
@@ -2139,7 +2169,7 @@
         }
 
         async function syncHistory() {
-            if (!authToken || !window.fbAuth || !window.fbAuth.currentUser) return;
+            if (!window.fbAuth || !window.fbAuth.currentUser) return;
             try {
                 const uid = window.fbAuth.currentUser.uid;
                 // Merge history into user document
@@ -2260,7 +2290,7 @@
             receiving = true;
 
             // Soft Gate Check (Trigger login if user is not authenticated and tries to send chats)
-            if (!authToken) {
+            if (!window.fbAuth || !window.fbAuth.currentUser) {
                 if (guestChatCount >= 1) {
                     openAuthModal();
                     receiving = false;
@@ -2306,13 +2336,15 @@
             let responseText = "";
 
             try {
-                const response = await fetch(`${API_URL}/chat`, {
+                const endpoint = API_URL.includes('cloudfunctions.net') 
+                    ? `${API_URL}/streamChat` 
+                    : `${API_URL}/chat`;
+                    
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
                     },
-                    credentials: 'include',
                     body: JSON.stringify({ messages: apiMessages })
                 });
 
