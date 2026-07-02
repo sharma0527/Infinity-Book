@@ -508,18 +508,22 @@ async function startServer() {
     }
     console.log("✅ MongoDB Connected Successfully.");
 
-    try {
-      const { transporter } = require('./services/emailService');
-      console.log("Verifying SMTP Connection Pool...");
-      await transporter.verify();
-      console.log("✅ SMTP Connection Pool Ready.");
-    } catch (err) {
-      console.error("❌ SMTP Verification Failed (Emails may fail):", err.message);
-    }
-
+    // Bind the port immediately so Render's health scan succeeds right away.
     server.listen(PORT, () => {
       console.log(`≡ƒÜÇ Server running on port ${PORT}`);
     });
+
+    // Verify SMTP in the background — never block server startup on this.
+    (async () => {
+      try {
+        const { transporter } = require('./services/emailService');
+        console.log("Verifying SMTP Connection Pool...");
+        await transporter.verify();
+        console.log("✅ SMTP Connection Pool Ready.");
+      } catch (err) {
+        console.error("❌ SMTP Verification Failed (Emails may fail):", err.message);
+      }
+    })();
   } catch (err) {
     console.error("Γ¥î CRITICAL: Server failed to start:", err);
     process.exit(1);
