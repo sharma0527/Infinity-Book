@@ -26,5 +26,8 @@
       "firebase-debug.*.log",
       "*.local"
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }
