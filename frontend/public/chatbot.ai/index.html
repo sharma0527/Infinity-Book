@@ -2340,9 +2340,9 @@
             let responseText = "";
 
             try {
-                const endpoint = API_URL.includes('cloudfunctions.net') 
-                    ? `${API_URL}/streamChat` 
-                    : `${API_URL}/chat`;
+                const endpoint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? '/api/chat' 
+                    : '/streamChat';
                     
                 const response = await fetch(endpoint, {
                     method: 'POST',
