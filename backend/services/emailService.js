@@ -1,9 +1,12 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
+    pool: true, // Enables connection pooling
+    maxConnections: 5, // Maximum number of connections to make
+    maxMessages: 100, // Maximum number of messages to send per connection
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
+    secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
@@ -142,7 +145,14 @@ async function sendOTP(email, otp) {
         console.log("Email Sent via SMTP:", info.messageId);
         return true;
     } catch (err) {
-        console.error("Email Send via SMTP Error:", err);
+        console.error("================ SMTP ERROR ================");
+        console.error("Name:", err.name);
+        console.error("Code:", err.code);
+        console.error("Command:", err.command);
+        console.error("Response:", err.response);
+        console.error("Message:", err.message);
+        console.error("Stack:", err.stack);
+        console.error("============================================");
         return false;
     }
 }
@@ -265,7 +275,14 @@ async function sendWelcomeEmail(email, name) {
         console.log("Welcome Email Sent via SMTP:", info.messageId);
         return true;
     } catch (err) {
-        console.error("Welcome Email Send via SMTP Error:", err);
+        console.error("============ WELCOME SMTP ERROR ============");
+        console.error("Name:", err.name);
+        console.error("Code:", err.code);
+        console.error("Command:", err.command);
+        console.error("Response:", err.response);
+        console.error("Message:", err.message);
+        console.error("Stack:", err.stack);
+        console.error("============================================");
         return false;
     }
 }

@@ -506,7 +506,16 @@ async function startServer() {
     if (!conn) {
       throw new Error("MongoDB Connection Failed");
     }
-    console.log("Γ£à MongoDB Connected Successfully.");
+    console.log("✅ MongoDB Connected Successfully.");
+
+    try {
+      const { transporter } = require('./services/emailService');
+      console.log("Verifying SMTP Connection Pool...");
+      await transporter.verify();
+      console.log("✅ SMTP Connection Pool Ready.");
+    } catch (err) {
+      console.error("❌ SMTP Verification Failed (Emails may fail):", err.message);
+    }
 
     server.listen(PORT, () => {
       console.log(`≡ƒÜÇ Server running on port ${PORT}`);
