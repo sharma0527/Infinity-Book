@@ -36,7 +36,7 @@
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="./socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1285,36 +1285,7 @@
             localStorage.setItem('infinity_backend_url', savedBackendUrl.replace('infinity-book.onrender.com', 'infinity-book-1.onrender.com'));
         }
 
-        // Dynamic API URL definition with customizable user settings
-        let parentApiUrl = null;
-        try {
-            if (window.parent && window.parent.VITE_API_URL) {
-                parentApiUrl = window.parent.VITE_API_URL;
-            }
-        } catch (e) {
-            // Ignore cross-origin error
-        }
-
-        let rawApi = parentApiUrl ||
-            ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                ? 'http://localhost:5000/api'
-                : (localStorage.getItem('infinity_backend_url') || 'https://infinity-book-1.onrender.com/api'));
-
-        let API_URL = '';
-        function normalizeAndSetApiUrl(url) {
-            if (!url) return;
-            let normalized = url.trim();
-            if (normalized.endsWith('/')) {
-                normalized = normalized.slice(0, -1);
-            }
-            if (!normalized.endsWith('/api')) {
-                normalized = `${normalized}/api`;
-            }
-            API_URL = normalized;
-            localStorage.setItem('infinity_backend_url', normalized);
-        }
-
-        normalizeAndSetApiUrl(rawApi);
+        let API_URL = '/api';
 
         let guestChatCount = 0;
 
@@ -1363,7 +1334,6 @@
             }
 
             // Initialize the collaborative socket connection
-            initChatSocket();
         };
 
         // --- Authentication Logic --- //
@@ -2150,19 +2120,18 @@
 
 
         async function fetchHistory() {
+            if (!window.fbAuth || !window.fbAuth.currentUser) return;
             try {
-                const response = await fetch(`${API_URL}/history/sync`, {
-                    headers: { 'Authorization': `Bearer ${authToken}` },
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    const data = await response.json();
+                const uid = window.fbAuth.currentUser.uid;
+                const docSnap = await window.fbGetDoc(window.fbDoc(window.fbDb, "users", uid));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
                     if (data.history) chatHistoryDb = data.history;
                     if (data.projects) projectsDb = data.projects;
                     localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
                     localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
-                } else if (response.status === 401) {
-                    logout(); // Token expired
+                    renderSidebarHistory();
+                    renderProjects();
                 }
             } catch (err) {
                 console.error("Failed to fetch history", err);
@@ -2170,14 +2139,14 @@
         }
 
         async function syncHistory() {
-            if (!authToken) return;
+            if (!authToken || !window.fbAuth || !window.fbAuth.currentUser) return;
             try {
-                await fetch(`${API_URL}/history/sync`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                    credentials: 'include',
-                    body: JSON.stringify({ history: chatHistoryDb, projects: projectsDb })
-                });
+                const uid = window.fbAuth.currentUser.uid;
+                // Merge history into user document
+                await window.fbSetDoc(window.fbDoc(window.fbDb, "users", uid), {
+                    history: chatHistoryDb,
+                    projects: projectsDb
+                }, { merge: true });
             } catch (err) {
                 console.error("Failed to sync history", err);
             }

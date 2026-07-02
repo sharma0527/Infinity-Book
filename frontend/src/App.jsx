@@ -8,11 +8,10 @@ import FlowingMenu from "./components/FlowingMenu";
 import AIAssistant from "./components/AIAssistant";
 import HomePage from "./components/HomePage";
 import { ChevronLeft, ChevronRight, Home, Sparkles, Menu, X as XIcon, LogOut } from "lucide-react";
-import { io } from "socket.io-client";
-
+import { auth, db } from "./firebase";
 import AuthModal from "./components/AuthModal";
-import { auth } from "./firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, onSnapshot, setDoc, deleteDoc, serverTimestamp, collection } from "firebase/firestore";
 
 import { API_URL } from "./config/api";
 
@@ -20,40 +19,9 @@ import { API_URL } from "./config/api";
 const rawApiUrl = API_URL;
 window.VITE_API_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
-// Migrate old backend URLs in localStorage
-const savedBackendUrl = localStorage.getItem('infinity_backend_url');
-if (savedBackendUrl && savedBackendUrl.includes('infinity-book.onrender.com') && !savedBackendUrl.includes('infinity-book-1.onrender.com')) {
-  localStorage.setItem('infinity_backend_url', savedBackendUrl.replace('infinity-book.onrender.com', 'infinity-book-1.onrender.com'));
-}
 
-// Extract the base socket URL dynamically from saved settings or default
-const getSocketUrl = () => {
-  let envUrl = API_URL;
-  if (envUrl) {
-    return envUrl.endsWith('/api') ? envUrl.slice(0, -4) : envUrl;
-  }
 
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return "http://localhost:5000";
-  }
-  const savedBackend = localStorage.getItem('infinity_backend_url');
-  if (savedBackend) {
-    try {
-      const url = new URL(savedBackend);
-      return url.origin;
-    } catch {
-      // ignore
-    }
-  }
-  return "https://infinity-book-1.onrender.com";
-};
-
-const socket = io(getSocketUrl(), { 
-  autoConnect: false,
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 1000
-});
+// Firebase backend URL configuration removed as it uses native SDKs
 
 export default function App() {
   // LocalStorage initialization to persist permanently
@@ -234,53 +202,51 @@ export default function App() {
 
       // Build user metadata for live presence tracking
       const user = {
+        id: localStorage.getItem('infinity_name') ? (localStorage.getItem('infinity_email') || 'guest@infinity.book') : 'Guest_' + Math.random().toString(36).substring(2, 7),
         name: localStorage.getItem('infinity_name') || 'Guest',
         email: localStorage.getItem('infinity_email') || 'guest@infinity.book',
         picture: localStorage.getItem('infinity_picture') || ''
       };
 
-      // Stream Initiation
-      socket.connect();
-      socket.emit("join_document", { roomId: docId, user });
-
-      const handleInitSync = (serverPages) => {
-        // If the cloud already holds data for this session, instantly populate it to memory
-        if (serverPages && serverPages.length > 0) {
-          setPages(serverPages);
+      // Subscribe to document changes
+      const docRef = doc(db, 'documents', docId);
+      const unsubscribeDoc = onSnapshot(docRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data.pages && data.pages.length > 0) {
+            setPages(data.pages);
+          }
+        } else {
+          // If the document doesn't exist yet, we don't need to do anything, 
+          // the broadcastAndSetPages will create it.
         }
-      };
+      });
 
-      const handleSyncPages = (latestPagesArray) => {
-        setPages(latestPagesArray);
-      };
+      // Subscribe to collaborators changes and add self
+      const collaboratorsRef = collection(db, 'documents', docId, 'collaborators');
+      const selfRef = doc(collaboratorsRef, user.id);
+      
+      // Update our presence
+      setDoc(selfRef, { ...user, lastSeen: serverTimestamp() }).catch(console.error);
 
-      const handlePresenceChange = (activeUsers) => {
+      // Listen for all collaborators
+      const unsubscribeCollab = onSnapshot(collaboratorsRef, (snapshot) => {
+        const activeUsers = [];
+        snapshot.forEach(doc => {
+           activeUsers.push(doc.data());
+        });
         setCollaborators(activeUsers);
-      };
-
-      socket.on("init_sync", handleInitSync);
-      socket.on("sync_pages", handleSyncPages);
-      socket.on("presence_change", handlePresenceChange);
+      });
 
       return () => {
-        socket.off("init_sync", handleInitSync);
-        socket.off("sync_pages", handleSyncPages);
-        socket.off("presence_change", handlePresenceChange);
-        socket.disconnect();
+        unsubscribeDoc();
+        unsubscribeCollab();
+        deleteDoc(selfRef).catch(console.error);
       };
     }
   }, [view]);
 
-  // Heartbeat keep-warm effect to query /health route on Render/Railway every 5 minutes
-  useEffect(() => {
-    const pingServer = () => {
-      const url = getSocketUrl();
-      fetch(`${url}/health`).catch(() => {});
-    };
-    pingServer(); // initial ping
-    const interval = setInterval(pingServer, 300000); // 5 mins
-    return () => clearInterval(interval);
-  }, []);
+  // Removed heartbeat ping logic
 
   // Listen for iframe messages
   useEffect(() => {
@@ -303,8 +269,12 @@ export default function App() {
   // Sync helper that replaces standard local setPages
   const broadcastAndSetPages = (newPages) => {
     setPages(newPages);
-    if (socket.connected) {
-      socket.emit('update_pages', newPages);
+    
+    // Broadcast to Firestore
+    const docId = new URLSearchParams(window.location.search).get('doc');
+    if (docId) {
+      setDoc(doc(db, 'documents', docId), { pages: newPages }, { merge: true })
+        .catch(console.error);
     }
   };
 
