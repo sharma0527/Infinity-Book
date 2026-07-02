@@ -108,12 +108,13 @@ async function streamFromProvider(res, messages, provider) {
 
 exports.streamChat = onRequest({
     secrets: ["OPENROUTER_API_KEY", "GROQ_API_KEY"],
-    timeoutSeconds: 120
+    timeoutSeconds: 120,
+    cors: [
+        "https://infinity-book.pages.dev",
+        "https://infinity-book-seven.vercel.app",
+        "http://localhost:5173"
+    ]
 }, async (req, res) => {
-    if (req.method === 'OPTIONS') {
-        res.status(204).send('');
-        return;
-    }
 
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
