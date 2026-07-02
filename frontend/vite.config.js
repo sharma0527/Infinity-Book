@@ -7,9 +7,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://us-central1-infinity-ai-e26ac.cloudfunctions.net',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/chat/, '/streamChat'),
       }
     }
   }
