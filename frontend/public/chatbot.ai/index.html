@@ -1633,11 +1633,11 @@
             const modalSubtitle = document.getElementById('auth-modal-subtitle');
 
             // Hide all form panels
-            document.getElementById('form-login').classList.add('hidden');
-            document.getElementById('form-signup').classList.add('hidden');
-            document.getElementById('form-forgot').classList.add('hidden');
-            document.getElementById('form-otp-signup').classList.add('hidden');
-            document.getElementById('form-otp-forgot').classList.add('hidden');
+            const forms = ['form-login', 'form-signup', 'form-forgot', 'form-otp-signup', 'form-otp-forgot'];
+            forms.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
 
             if (mode === 'login') {
                 modalTitle.textContent = 'Login';
@@ -1653,19 +1653,32 @@
                 modalTitle.textContent = 'Forgot Password';
                 modalSubtitle.textContent = 'Reset your account credentials';
                 document.getElementById('form-forgot').classList.remove('hidden');
-                setTimeout(() => document.getElementById('forgot-email').focus(), 50);
+                setTimeout(() => {
+                    const emailInput = document.getElementById('forgot-email');
+                    if (emailInput) emailInput.focus();
+                }, 50);
             } else if (mode === 'otp-signup') {
                 modalTitle.textContent = 'OTP Verification';
                 modalSubtitle.textContent = 'Confirm your Gmail address';
-                document.getElementById('form-otp-signup').classList.remove('hidden');
-                document.getElementById('otp-signup-sent-email').textContent = authTempEmail;
-                setTimeout(() => document.getElementById('signup-otp').focus(), 50);
+                const el = document.getElementById('form-otp-signup');
+                if (el) el.classList.remove('hidden');
+                const sentEmail = document.getElementById('otp-signup-sent-email');
+                if (sentEmail) sentEmail.textContent = authTempEmail;
+                setTimeout(() => {
+                    const otpInput = document.getElementById('signup-otp');
+                    if (otpInput) otpInput.focus();
+                }, 50);
             } else if (mode === 'otp-forgot') {
                 modalTitle.textContent = 'Reset Password';
                 modalSubtitle.textContent = 'Verify OTP and set new password';
-                document.getElementById('form-otp-forgot').classList.remove('hidden');
-                document.getElementById('otp-forgot-sent-email').textContent = authTempEmail;
-                setTimeout(() => document.getElementById('forgot-otp').focus(), 50);
+                const el = document.getElementById('form-otp-forgot');
+                if (el) el.classList.remove('hidden');
+                const sentEmail = document.getElementById('otp-forgot-sent-email');
+                if (sentEmail) sentEmail.textContent = authTempEmail;
+                setTimeout(() => {
+                    const otpInput = document.getElementById('forgot-otp');
+                    if (otpInput) otpInput.focus();
+                }, 50);
             }
         }
 
@@ -2425,12 +2438,23 @@
             }
         }
 
+        let guestMessageCount = 0;
+
         // Event Listeners for Input
         sendButton.addEventListener("click", () => {
             const hasText = messageInput.value.trim() !== "";
             const hasAttachment = window.attachedFileContext && window.attachedFileName;
 
             if (!receiving && (hasText || hasAttachment)) {
+                if (!authToken) {
+                    if (guestMessageCount >= 2) {
+                        openAuthModal();
+                        switchAuthMode('signup');
+                        return;
+                    }
+                    guestMessageCount++;
+                }
+
                 const rawUserText = messageInput.value.trim();
                 messageInput.value = "";
                 autoResize(messageInput);
