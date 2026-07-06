@@ -76,7 +76,6 @@ const corsMiddleware = cors({
 
 // Apply CORS before ANY other middleware
 app.use(corsMiddleware);
-app.options('*', corsMiddleware);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 
