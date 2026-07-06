@@ -24,18 +24,6 @@ const historyRoutes = require('./routes/history');
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  message: { error: 'Too many requests from this IP. Please try again after 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-app.use('/api/auth', authLimiter);
-
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
@@ -86,7 +74,21 @@ const corsMiddleware = cors({
   ]
 });
 
+// Apply CORS before ANY other middleware
 app.use(corsMiddleware);
+app.options('*', corsMiddleware);
+
+app.use(helmet({ contentSecurityPolicy: false }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per window
+  message: { error: 'Too many requests from this IP. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/auth', authLimiter);
 
 app.use(express.json());
 
@@ -238,6 +240,8 @@ io.on('connection', (socket) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/history', historyRoutes);
+const interviewRoutes = require('./routes/interview');
+app.use('/api/interview', interviewRoutes);
 
 // Health Route for keep-warm pings
 app.get('/health', (req, res) => {
