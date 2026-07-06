@@ -2353,8 +2353,8 @@
             let responseText = "";
 
             try {
-                const endpoint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                    ? '/api/chat' 
+                const endpoint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
+                    ? 'http://localhost:5000/api/chat' 
                     : '/streamChat';
                     
                 const response = await fetch(endpoint, {
