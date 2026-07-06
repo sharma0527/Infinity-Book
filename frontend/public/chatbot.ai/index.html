@@ -2355,7 +2355,7 @@
             try {
                 const endpoint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
                     ? 'http://localhost:5000/api/chat' 
-                    : '/streamChat';
+                    : 'https://infinity-book-1.onrender.com/api/chat';
                     
                 const response = await fetch(endpoint, {
                     method: 'POST',
