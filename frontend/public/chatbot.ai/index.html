@@ -1291,11 +1291,8 @@
         let projectsDb = JSON.parse(localStorage.getItem('infinity_projects')) || [];
         let activeProject = null;
 
-        // When hosted on Vercel/Cloudflare, we must use the absolute Firebase Function URL
-        // because static hosts return 405 for POST requests to /api
-        let API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? '/api' 
-            : 'https://us-central1-infinity-ai-e26ac.cloudfunctions.net';
+        // Backend API base URL
+        let API_URL = '/api';
 
         
         // Setup Firebase Auth State Listener
@@ -2174,12 +2171,9 @@
             let responseText = "";
 
             try {
-                // Use the API_URL defined earlier. For Firebase Functions, the endpoint is /streamChat
-                let endpoint = API_URL + '/streamChat';
-                if (API_URL === '/api') {
-                     // Local dev server via Vite proxy, proxy might map /api to functions
-                     endpoint = 'http://127.0.0.1:5001/infinity-ai-e26ac/us-central1/streamChat'; 
-                }
+                // Use the new Cloudflare Pages Function endpoint
+                let endpoint = API_URL + '/chat';
+
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
