@@ -1291,12 +1291,6 @@
         let projectsDb = JSON.parse(localStorage.getItem('infinity_projects')) || [];
         let activeProject = null;
 
-        // Migrate old backend URLs in localStorage
-        const savedBackendUrl = localStorage.getItem('infinity_backend_url');
-        if (savedBackendUrl && savedBackendUrl.includes('infinity-book.onrender.com') && !savedBackendUrl.includes('infinity-book-1.onrender.com')) {
-            localStorage.setItem('infinity_backend_url', savedBackendUrl.replace('infinity-book.onrender.com', 'infinity-book-1.onrender.com'));
-        }
-
         // When hosted on Vercel/Cloudflare, we must use the absolute Firebase Function URL
         // because static hosts return 405 for POST requests to /api
         let API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -1429,7 +1423,7 @@
                     parentApiUrl ||
                     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
                         ? 'http://localhost:5000/api'
-                        : 'https://infinity-book-1.onrender.com/api');
+                        : 'https://us-central1-infinity-ai-e26ac.cloudfunctions.net');
             }
         };
 
@@ -2180,10 +2174,12 @@
             let responseText = "";
 
             try {
-                const endpoint = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === ''
-                    ? 'http://localhost:5000/api/chat' 
-                    : 'https://infinity-book-1.onrender.com/api/chat';
-                    
+                // Use the API_URL defined earlier. For Firebase Functions, the endpoint is /streamChat
+                let endpoint = API_URL + '/streamChat';
+                if (API_URL === '/api') {
+                     // Local dev server via Vite proxy, proxy might map /api to functions
+                     endpoint = 'http://127.0.0.1:5001/infinity-ai-e26ac/us-central1/streamChat'; 
+                }
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
