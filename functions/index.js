@@ -1,12 +1,13 @@
 const { onRequest } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
+const cors = require("cors")({ origin: true });
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// Set CORS for all functions
-setGlobalOptions({ cors: true, maxInstances: 10 });
+// Set global options
+setGlobalOptions({ maxInstances: 10 });
 
 function streamMockResponse(res, messages) {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -108,10 +109,9 @@ async function streamFromProvider(res, messages, provider) {
 
 exports.streamChat = onRequest({
     secrets: ["OPENROUTER_API_KEY", "GROQ_API_KEY"],
-    timeoutSeconds: 120,
-    cors: true
-}, async (req, res) => {
-
+    timeoutSeconds: 120
+}, (req, res) => {
+    cors(req, res, async () => {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
@@ -195,4 +195,5 @@ exports.streamChat = onRequest({
             console.error("Failed to save assistant msg:", err);
         }
     }
+    });
 });
