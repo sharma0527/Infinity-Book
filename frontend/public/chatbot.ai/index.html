@@ -41,7 +41,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyAt9vtBVggTyY0fIyIRYB33QqXPOcvMjoE",
@@ -69,6 +69,11 @@
         window.fbDoc = doc;
         window.fbSetDoc = setDoc;
         window.fbGetDoc = getDoc;
+        window.fbCollection = collection;
+        window.fbQuery = query;
+        window.fbWhere = where;
+        window.fbGetDocs = getDocs;
+        window.fbDeleteDoc = deleteDoc;
         
         window.dispatchEvent(new Event('firebase-ready'));
     </script>
@@ -1988,16 +1993,35 @@
             if (!window.fbAuth || !window.fbAuth.currentUser) return;
             try {
                 const uid = window.fbAuth.currentUser.uid;
+                
+                // 1. Fetch projects from user doc
                 const docSnap = await window.fbGetDoc(window.fbDoc(window.fbDb, "users", uid));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    if (data.history) chatHistoryDb = data.history;
                     if (data.projects) projectsDb = data.projects;
-                    localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
-                    localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
-                    renderSidebarHistory();
-                    renderProjects();
+                    
+                    // Backward compatibility: load legacy history if present
+                    if (data.history && Object.keys(chatHistoryDb).length === 0) {
+                        chatHistoryDb = data.history;
+                    }
                 }
+
+                // 2. Fetch chats from chatHistory collection
+                const chatsQuery = window.fbQuery(window.fbCollection(window.fbDb, "chatHistory"), window.fbWhere("userId", "==", uid));
+                const querySnapshot = await window.fbGetDocs(chatsQuery);
+                
+                // If we found docs in the new collection, they override legacy data
+                if (!querySnapshot.empty) {
+                    chatHistoryDb = {};
+                    querySnapshot.forEach((doc) => {
+                        chatHistoryDb[doc.id] = doc.data();
+                    });
+                }
+
+                localStorage.setItem('infinity_ai_history', JSON.stringify(chatHistoryDb));
+                localStorage.setItem('infinity_projects', JSON.stringify(projectsDb));
+                renderSidebarHistory();
+                renderProjects();
             } catch (err) {
                 console.error("Failed to fetch history", err);
             }
@@ -2007,11 +2031,18 @@
             if (!window.fbAuth || !window.fbAuth.currentUser) return;
             try {
                 const uid = window.fbAuth.currentUser.uid;
-                // Merge history into user document
+                
+                // Save projects to user document
                 await window.fbSetDoc(window.fbDoc(window.fbDb, "users", uid), {
-                    history: chatHistoryDb,
                     projects: projectsDb
                 }, { merge: true });
+
+                // Sync each chat to the chatHistory collection
+                const promises = Object.entries(chatHistoryDb).map(([chatId, chatData]) => {
+                    const payload = { ...chatData, userId: uid };
+                    return window.fbSetDoc(window.fbDoc(window.fbDb, "chatHistory", chatId), payload, { merge: true });
+                });
+                await Promise.all(promises);
             } catch (err) {
                 console.error("Failed to sync history", err);
             }
@@ -2483,13 +2514,22 @@
             closeModal('rename-modal');
         });
 
-        document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
             if (targetActionId) {
                 delete chatHistoryDb[targetActionId];
                 saveHistory();
                 renderSidebarHistory();
                 if (activeChatId === targetActionId) {
                     startNewChat();
+                }
+
+                // Delete from Firebase chatHistory collection
+                if (window.fbAuth && window.fbAuth.currentUser) {
+                    try {
+                        await window.fbDeleteDoc(window.fbDoc(window.fbDb, "chatHistory", targetActionId));
+                    } catch (e) {
+                        console.error("Failed to delete chat from DB", e);
+                    }
                 }
             }
             closeModal('delete-modal');
