@@ -40,7 +40,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         
         const firebaseConfig = {
@@ -61,6 +61,7 @@
         window.fbSignInWithEmailAndPassword = signInWithEmailAndPassword;
         window.fbCreateUserWithEmailAndPassword = createUserWithEmailAndPassword;
         window.fbSendEmailVerification = sendEmailVerification;
+        window.fbSendPasswordResetEmail = sendPasswordResetEmail;
         window.fbSignInWithPopup = signInWithPopup;
         window.fbSignOut = signOut;
         window.fbOnAuthStateChanged = onAuthStateChanged;
@@ -1170,9 +1171,18 @@
                     </p>
                 </div>
 
-                <!-- FORGOT PASSWORD FORM (REMOVED LOGIC) -->
+                <!-- FORGOT PASSWORD FORM -->
                 <div id="form-forgot" class="space-y-3 hidden">
-                    <p class="text-xs text-textSecondary mb-2">Password reset is currently only supported via the main Infinity App.</p>
+                    <p class="text-xs text-textSecondary mb-2">Enter your email address to receive a password reset link.</p>
+                    <div>
+                        <label class="text-[10px] font-semibold text-textSecondary mb-1.5 block uppercase tracking-wider">Email Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@example.com" class="auth-input" />
+                    </div>
+                    <button id="forgot-btn" onclick="handleForgotSubmit()"
+                        class="w-full py-3 bg-accent hover:bg-accentHover rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                        <span id="forgot-btn-spinner" class="hidden w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                        <span id="forgot-btn-text">Send Reset Link</span>
+                    </button>
                     <button type="button" onclick="switchAuthMode('login')"
                         class="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl text-sm font-bold text-white transition-all duration-200 mt-2">
                         Back to Login
@@ -1633,7 +1643,7 @@
             const modalSubtitle = document.getElementById('auth-modal-subtitle');
 
             // Hide all form panels
-            const forms = ['form-login', 'form-signup', 'form-forgot', 'form-otp-signup', 'form-otp-forgot'];
+            const forms = ['form-login', 'form-signup', 'form-forgot'];
             forms.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
@@ -1657,82 +1667,7 @@
                     const emailInput = document.getElementById('forgot-email');
                     if (emailInput) emailInput.focus();
                 }, 50);
-            } else if (mode === 'otp-signup') {
-                modalTitle.textContent = 'OTP Verification';
-                modalSubtitle.textContent = 'Confirm your Gmail address';
-                const el = document.getElementById('form-otp-signup');
-                if (el) el.classList.remove('hidden');
-                const sentEmail = document.getElementById('otp-signup-sent-email');
-                if (sentEmail) sentEmail.textContent = authTempEmail;
-                setTimeout(() => {
-                    const otpInput = document.getElementById('signup-otp');
-                    if (otpInput) otpInput.focus();
-                }, 50);
-            } else if (mode === 'otp-forgot') {
-                modalTitle.textContent = 'Reset Password';
-                modalSubtitle.textContent = 'Verify OTP and set new password';
-                const el = document.getElementById('form-otp-forgot');
-                if (el) el.classList.remove('hidden');
-                const sentEmail = document.getElementById('otp-forgot-sent-email');
-                if (sentEmail) sentEmail.textContent = authTempEmail;
-                setTimeout(() => {
-                    const otpInput = document.getElementById('forgot-otp');
-                    if (otpInput) otpInput.focus();
-                }, 50);
             }
-        }
-
-        function startResendCountdown(type) {
-            clearInterval(countdownTimer);
-            cooldownSeconds = 60;
-            const resendBtn = document.getElementById(`${type}-resend-btn`);
-            if (resendBtn) {
-                resendBtn.disabled = true;
-                resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
-            }
-
-            countdownTimer = setInterval(() => {
-                cooldownSeconds--;
-                if (cooldownSeconds <= 0) {
-                    clearInterval(countdownTimer);
-                    if (resendBtn) {
-                        resendBtn.disabled = false;
-                        resendBtn.textContent = 'Resend Code';
-                    }
-                } else {
-                    if (resendBtn) {
-                        resendBtn.textContent = `Resend in ${cooldownSeconds}s`;
-                    }
-                }
-            }, 1000);
-        }
-
-        function resendOtp(type) {
-            const errorDiv = document.getElementById('auth-error');
-            const successDiv = document.getElementById('auth-success');
-            errorDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
-
-            showSuccess('Resending verification code...');
-            startResendCountdown(type);
-
-            const url = type === 'signup' ? `${API_URL}/auth/send-otp` : `${API_URL}/auth/forgot-password/send-otp`;
-            const payload = type === 'signup' ? { email: authTempEmail, requestType: 'signup' } : { email: authTempEmail };
-
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(payload)
-            }).then(response => response.json().then(data => {
-                if (!response.ok) {
-                    showError(data.error || 'Failed to resend verification code.');
-                } else {
-                    showSuccess(data.message || 'Verification code resent successfully.');
-                }
-            })).catch(() => {
-                showError('Network error. Please check your connection.');
-            });
         }
 
         async function handleSignupSubmit() {
@@ -1979,132 +1914,28 @@
 
             let email = document.getElementById('forgot-email').value.trim();
             if (!email) {
-                showError('Please enter your Gmail address.');
-                return;
-            }
-            if (!email.includes('@')) {
-                email = email + '@gmail.com';
-            }
-            if (!isValidGmail(email)) {
-                showError('Only original Gmail addresses (@gmail.com) are accepted without aliases (+).');
+                showError('Please enter your email address.');
                 return;
             }
 
-            authTempEmail = email.toLowerCase();
-
-            setButtonLoading('forgot-btn', true, 'Sending Code...');
-            showSuccess('Sending verification code...');
+            setButtonLoading('forgot-btn', true, 'Sending Link...');
+            showSuccess('Sending password reset link...');
 
             try {
-                const response = await fetch(`${API_URL}/auth/forgot-password/send-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ email: authTempEmail })
-                });
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'Failed to send verification code.');
-                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
+                await window.fbSendPasswordResetEmail(window.fbAuth, email);
+                showSuccess('Password reset link sent to your email.');
+                setButtonLoading('forgot-btn', false, 'Send Reset Link');
+                setTimeout(() => {
+                    switchAuthMode('login');
+                }, 3000);
+            } catch (err) {
+                console.error(err);
+                if (err.code === 'auth/user-not-found') {
+                    showError('No account found with this email.');
                 } else {
-                    showSuccess(data.message || 'Verification code sent successfully.');
-                    setButtonLoading('forgot-btn', false, 'Send Reset Code');
-                    switchAuthMode('otp-forgot');
-                    startResendCountdown('forgot');
+                    showError(err.message || 'Failed to send password reset link.');
                 }
-            } catch (err) {
-                showError('Network error. Please check your connection.');
-                setButtonLoading('forgot-btn', false, 'Send Reset Code');
-            }
-        }
-
-        async function completeSignup() {
-            const otp = document.getElementById('signup-otp').value.trim();
-
-            if (!otp) {
-                showError('Please enter verification code.');
-                return;
-            }
-
-            setButtonLoading('otp-signup-btn', true, 'Creating Account...');
-            showSuccess('Creating account...');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/signup`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        name: authTempName,
-                        email: authTempEmail,
-                        otp,
-                        password: authTempPassword
-                    })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
-                    setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
-                    return;
-                }
-
-                saveSessionAndLogin(data, true);
-                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
-            } catch (err) {
-                showError('Network error during account creation.');
-                setButtonLoading('otp-signup-btn', false, 'Verify & Create Account');
-            }
-        }
-
-        async function completeReset() {
-            const otp = document.getElementById('forgot-otp').value.trim();
-            const newPassword = document.getElementById('forgot-password').value;
-            const confirmPassword = document.getElementById('forgot-confirm-password').value;
-
-            if (!otp || !newPassword || !confirmPassword) {
-                showError('All fields are required.');
-                return;
-            }
-
-            const passVal = validatePasswordStrength(newPassword);
-            if (!passVal.isValid) {
-                showError('New password rules: ' + passVal.message);
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showError('Passwords do not match.');
-                return;
-            }
-
-            setButtonLoading('otp-forgot-btn', true, 'Resetting Password...');
-            showSuccess('Resetting password...');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/forgot-password/reset`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        email: authTempEmail,
-                        otp,
-                        newPassword
-                    })
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    showError(data.error || 'The verification code is incorrect or has expired. Please request a new code.');
-                    setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
-                    return;
-                }
-
-                saveSessionAndLogin(data, false);
-                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
-            } catch (err) {
-                showError('Network error during password reset.');
-                setButtonLoading('otp-forgot-btn', false, 'Reset Password & Login');
+                setButtonLoading('forgot-btn', false, 'Send Reset Link');
             }
         }
 
@@ -2113,12 +1944,8 @@
             document.getElementById('login-password').value = '';
             document.getElementById('signup-name').value = '';
             document.getElementById('signup-email').value = '';
-            document.getElementById('signup-otp').value = '';
             document.getElementById('signup-password').value = '';
             document.getElementById('forgot-email').value = '';
-            document.getElementById('forgot-otp').value = '';
-            document.getElementById('forgot-password').value = '';
-            document.getElementById('forgot-confirm-password').value = '';
 
             document.getElementById('auth-error').classList.add('hidden');
             document.getElementById('auth-success').classList.add('hidden');
