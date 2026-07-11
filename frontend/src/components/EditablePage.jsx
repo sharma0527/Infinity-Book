@@ -183,27 +183,46 @@ export default function EditablePage({ html, setHtml, isActiveMode, activeFont, 
     }
   };
 
-  // ─── Paste ───────────────────────────────────────────────────────────────
   const handleEditorPaste = (e) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const img = document.createElement('img');
-          img.src = ev.target.result;
-          img.style.cssText = 'width:240px;max-width:100%;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.15);display:block;cursor:pointer;';
-          const wrapper = document.createElement('div');
-          wrapper.style.cssText = 'margin:8px 0;line-height:0;position:relative;display:inline-block;';
-          wrapper.appendChild(img);
-          editorRef.current.appendChild(wrapper);
-          setHtml(editorRef.current.innerHTML);
-        };
-        reader.readAsDataURL(item.getAsFile());
-        return;
+    let hasImage = false;
+    
+    if (items) {
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          hasImage = true;
+          e.preventDefault();
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const img = document.createElement('img');
+            img.src = ev.target.result;
+            img.style.cssText = 'width:240px;max-width:100%;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,0.15);display:block;cursor:pointer;';
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'margin:8px 0;line-height:0;position:relative;display:inline-block;';
+            wrapper.appendChild(img);
+            
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(wrapper);
+              range.collapse(false);
+            } else {
+              editorRef.current.appendChild(wrapper);
+            }
+            setHtml(editorRef.current.innerHTML);
+          };
+          reader.readAsDataURL(item.getAsFile());
+          return;
+        }
       }
+    }
+
+    if (!hasImage) {
+      e.preventDefault();
+      const textData = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, textData);
+      setHtml(editorRef.current.innerHTML);
     }
   };
 
